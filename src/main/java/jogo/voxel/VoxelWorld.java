@@ -108,17 +108,15 @@ public class VoxelWorld {
     //TODO this is where you'll generate your world
     public void generateLayers() {
         long seed = new Random().nextLong();
-        OpenSimplexNoise noise = new OpenSimplexNoise(seed);
-        int groundBase = getGroundHeight();
-        float scale = 0.05f;
-        int amplitude = 6;
+        int groundBase = 20;      // altura base
+        float scale = 0.05f;      // frequência do ruído
+        int amplitude = 6;        // diferença máxima de altura
 
-        // (7) Percorre todo o terreno horizontalmente
         for (int x = 0; x < sizeX; x++) {
             for (int z = 0; z < sizeZ; z++) {
-
-                double n = noise.eval(x * scale, z * scale);
-                int height = groundBase + (int)(n * amplitude);
+                // Chama a função da classe OpenSimplexNoise.OpenSimplex2S
+                double noise = OpenSimplexNoise.OpenSimplex2S.noise2(seed, x * scale, z * scale);
+                int height = groundBase + (int)(noise * amplitude);
 
                 for (int y = 0; y <= height && y < sizeY; y++) {
                     setBlock(x, y, z, VoxelPalette.STONE_ID);
