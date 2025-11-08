@@ -12,6 +12,7 @@ import jogo.engine.RenderIndex;
 import jogo.gameobject.GameObject;
 import jogo.gameobject.item.Item;
 import jogo.voxel.VoxelWorld;
+import jogo.util.Hit;
 
 public class InteractionAppState extends BaseAppState {
 
@@ -59,8 +60,8 @@ public class InteractionAppState extends BaseAppState {
         // 2) If no item hit, consider voxel block under crosshair (exercise for students)
         VoxelWorld vw = world != null ? world.getVoxelWorld() : null;
         if (vw != null) {
-            vw.pickFirstSolid(cam, reach).ifPresent(cell -> {
-                // Leave as exercise: implement voxel interaction (e.g., toggle, place, open menu)
+            vw.pickFirstSolid(cam, reach).ifPresent(hit -> {
+                VoxelWorld.Vector3i cell = hit.cell;
                 System.out.println("TODO (exercise): interact with voxel at " + cell.x + "," + cell.y + "," + cell.z);
             });
         }
