@@ -12,7 +12,8 @@ import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
 import com.jme3.texture.Texture2D;
 import jogo.util.ProcTextures;
-
+import Noise.OpenSimplexNoise;
+import java.util.Random;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -103,10 +104,28 @@ public class VoxelWorld {
 
     //TODO this is where you'll generate your world
     public void generateLayers() {
-        //generate a SINGLE block under the player:
-        Vector3i pos = new Vector3i(getRecommendedSpawn());
-        setBlock(pos.x, pos.y, pos.z, VoxelPalette.STONE_ID);
+        long seed = new Random().nextLong();
+        OpenSimplexNoise noise = new OpenSimplexNoise(seed);
+        int groundBase = getGroundHeight();
+        float scale = 0.05f;
+        int amplitude = 6;
+
+        // (7) Percorre todo o terreno horizontalmente
+        for (int x = 0; x < sizeX; x++) {
+            for (int z = 0; z < sizeZ; z++) {
+
+                double n = noise.eval(x * scale, z * scale);
+                int height = groundBase + (int)(n * amplitude);
+
+                for (int y = 0; y <= height && y < sizeY; y++) {
+                    setBlock(x, y, z, VoxelPalette.STONE_ID);
+                }
+            }
+        }
+
+        System.out.println("Terreno gerado com seed: " + seed);
     }
+
 
     public int getTopSolidY(int x, int z) {
         if (x < 0 || z < 0 || x >= sizeX || z >= sizeZ) return -1;
