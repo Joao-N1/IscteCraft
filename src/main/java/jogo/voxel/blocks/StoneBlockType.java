@@ -15,7 +15,7 @@ public class StoneBlockType extends VoxelBlockType {
 
     @Override
     public Material getMaterial(AssetManager assetManager) {
-        Texture2D tex = ProcTextures.checker(128, 4, ColorRGBA.Gray, ColorRGBA.DarkGray);
+        Texture2D tex = (Texture2D) assetManager.loadTexture("Textures/StoneBlock.png");
         Material m = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         m.setTexture("DiffuseMap", tex);
         m.setBoolean("UseMaterialColors", true);

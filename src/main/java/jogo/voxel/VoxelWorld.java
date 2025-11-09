@@ -109,7 +109,7 @@ public class VoxelWorld {
     public void generateLayers() {
         long seed = new Random().nextLong();
         int groundBase = 20;      // altura base
-        float scale = 0.05f;      // frequência do ruído
+        float scale = 0.03f;      // frequência do ruído
         int amplitude = 6;        // diferença máxima de altura
 
         for (int x = 0; x < sizeX; x++) {
