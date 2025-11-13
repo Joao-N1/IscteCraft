@@ -75,8 +75,10 @@ public class VoxelWorld {
     public byte getBlock(int x, int y, int z) {
         Chunk c = getChunk(x, y, z);
         if (c == null) return VoxelPalette.AIR_ID;
+        if (!inBounds(x,y,z)) return VoxelPalette.AIR_ID;
         return c.get(lx(x), ly(y), lz(z));
     }
+
     public void setBlock(int x, int y, int z, byte id) {
         Chunk c = getChunk(x, y, z);
         if (c != null) {
@@ -125,7 +127,12 @@ public class VoxelWorld {
                 int height = groundBase + (int)(noise * amplitude);
 
                 for (int y = 0; y <= height && y < sizeY; y++) {
-                    setBlock(x, y, z, VoxelPalette.STONE_ID);
+                    if (y == height)
+                        setBlock(x, y, z, VoxelPalette.GRASS_ID); // topo
+                    else if (y > height - 3)
+                        setBlock(x, y, z, VoxelPalette.DIRT_ID); // camada intermédia
+                    else
+                        setBlock(x, y, z, VoxelPalette.STONE_ID); // base
                 }
                 setBlock(x, 0, z, VoxelPalette.THEROCK_ID);
             }
