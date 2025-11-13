@@ -99,6 +99,12 @@ public class VoxelWorld {
 
     public boolean breakAt(int x, int y, int z) {
         if (!inBounds(x,y,z)) return false;
+        byte blockId = getBlock(x, y, z);
+
+        if (blockId == VoxelPalette.THEROCK_ID) {
+            return false;
+        }
+
         setBlock(x, y, z, VoxelPalette.AIR_ID);
         return true;
     }
@@ -121,6 +127,7 @@ public class VoxelWorld {
                 for (int y = 0; y <= height && y < sizeY; y++) {
                     setBlock(x, y, z, VoxelPalette.STONE_ID);
                 }
+                setBlock(x, 0, z, VoxelPalette.THEROCK_ID);
             }
         }
 
