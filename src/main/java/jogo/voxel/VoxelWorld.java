@@ -167,7 +167,7 @@ public class VoxelWorld {
 
         Random random = new Random(seed + 12345); // usa seed global para árvores consistentes
 
-        int treeChance = 90; // 1 em 90 blocos gera uma árvore
+        int treeChance = 110; // 1 em 110 blocos gera uma árvore
         int minHeight = 4;   // altura mínima do tronco
         int maxHeight = 6;   // altura máxima do tronco
 
