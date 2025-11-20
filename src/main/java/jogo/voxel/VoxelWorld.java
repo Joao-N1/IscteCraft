@@ -116,24 +116,47 @@ public class VoxelWorld {
     //TODO this is where you'll generate your world
     public void generateLayers() {
         long seed = new Random().nextLong();
-        int groundBase = 20;      // altura base
-        float scale = 0.03f;      // frequência do ruído
-        int amplitude = 6;        // diferença máxima de altura
+        int groundBase = 20;
+        float scale = 0.03f;
+        int amplitude = 6;
 
         for (int x = 0; x < sizeX; x++) {
             for (int z = 0; z < sizeZ; z++) {
-                // Chama a função da classe OpenSimplexNoise.OpenSimplex2S
+
                 double noise = OpenSimplexNoise.OpenSimplex2S.noise2(seed, x * scale, z * scale);
                 int height = groundBase + (int)(noise * amplitude);
 
                 for (int y = 0; y <= height && y < sizeY; y++) {
+                    if (y < 20) {
+
+                        // ------------------------
+                        //    CAVE GENERATION 3D
+                        // ------------------------
+                        double caveNoise = OpenSimplexNoise.OpenSimplex2S.noise3_Fallback(
+                                seed + 9999,       // seed diferente para não interferir com o terreno
+                                x * 0.04,          // frequência horizontal
+                                y * 0.04,          // frequência vertical
+                                z * 0.04
+                        );
+
+                        // Limite: ajusta para mais cavernas ou menos
+                        if (caveNoise > 0.60) {
+                            setBlock(x, y, z, VoxelPalette.AIR_ID);
+                            continue; // passa ao próximo y sem colocar bloco
+                        }
+                    }
+                    // ------------------------
+                    //   TERRENO NORMAL
+                    // ------------------------
                     if (y == height)
-                        setBlock(x, y, z, VoxelPalette.GRASS_ID); // topo
+                        setBlock(x, y, z, VoxelPalette.GRASS_ID);
                     else if (y > height - 3)
-                        setBlock(x, y, z, VoxelPalette.DIRT_ID); // camada intermédia
+                        setBlock(x, y, z, VoxelPalette.DIRT_ID);
                     else
-                        setBlock(x, y, z, VoxelPalette.STONE_ID); // base
+                        setBlock(x, y, z, VoxelPalette.STONE_ID);
                 }
+
+                // camada base inquebrável
                 setBlock(x, 0, z, VoxelPalette.THEROCK_ID);
             }
         }
