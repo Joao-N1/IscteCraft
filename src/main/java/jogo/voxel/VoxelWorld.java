@@ -158,6 +158,59 @@ public class VoxelWorld {
 
                 // camada base inquebrável
                 setBlock(x, 0, z, VoxelPalette.THEROCK_ID);
+
+            }
+        }
+        // ===========================================
+        //  GERAÇÃO DE ÁRVORES SIMPLES
+        // ===========================================
+
+        Random random = new Random(seed + 12345); // usa seed global para árvores consistentes
+
+        int treeChance = 90; // 1 em 90 blocos gera uma árvore
+        int minHeight = 4;   // altura mínima do tronco
+        int maxHeight = 6;   // altura máxima do tronco
+
+        for (int x = 2; x < sizeX - 2; x++) {
+            for (int z = 2; z < sizeZ - 2; z++) {
+
+                // chance aleatória de gerar árvore
+                if (random.nextInt(treeChance) != 0) continue;
+
+                // obter altura do solo
+                int y = getTopSolidY(x, z);
+                if (y < 0) continue;
+
+                // só gerar em cima de GRASS
+                if (getBlock(x, y, z) != VoxelPalette.GRASS_ID) continue;
+
+                // altura da árvore
+                int treeHeight = minHeight + random.nextInt(maxHeight - minHeight + 1);
+
+                // TRONCO
+                for (int h = 1; h <= treeHeight; h++) {
+                    setBlock(x, y + h, z, VoxelPalette.Wood_ID);
+                }
+
+                // FOLHAS (pequopa copa)
+                int top = y + treeHeight;
+
+                for (int lx = -2; lx <= 2; lx++) {
+                    for (int lz = -2; lz <= 2; lz++) {
+                        for (int ly = 0; ly <= 2; ly++) {
+
+                            // deixa algumas folhas com buracos aleatórios
+                            if (random.nextInt(6) == 0) continue;
+
+                            setBlock(
+                                    x + lx,
+                                    top + ly,
+                                    z + lz,
+                                    VoxelPalette.Leaf_ID
+                            );
+                        }
+                    }
+                }
             }
         }
 
