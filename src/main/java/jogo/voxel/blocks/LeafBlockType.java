@@ -21,4 +21,9 @@ public class LeafBlockType extends VoxelBlockType {
 
         return m;
     }
+
+    @Override
+    public float getHardness() {
+        return 0.25f;
+    }
 }

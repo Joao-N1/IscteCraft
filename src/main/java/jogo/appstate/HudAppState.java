@@ -17,9 +17,10 @@ public class HudAppState extends BaseAppState {
     private final Node guiNode;
     private final AssetManager assetManager;
 
-    //Interface do jogador
+    //Elementos da interface do jogador
     private BitmapText crosshair;
-    private Picture hotbar;
+
+    private List<Picture> hotbarSlots = new ArrayList<>();
     private Picture selector;
     private List<Picture> hearts = new ArrayList<>();
 
@@ -41,30 +42,40 @@ public class HudAppState extends BaseAppState {
         crosshair.setSize(font.getCharSet().getRenderedSize() * 2f);
         guiNode.attachChild(crosshair);
         centerCrosshair();
-        Hotbar(app);
-        Hearts(app);
+        initHotbar(app);
+        initHearts(app);
         refreshLayout();
         System.out.println("HudAppState initialized: UI elements attached");
     }
-    private void Hotbar(Application app) {
-        // Criar a imagem da Hotbar
-        hotbar = new Picture("Hotbar");
-        // Carregar a textura (assume que o ficheiro existe)
-        hotbar.setImage(assetManager, "Interface/hotbar.png", true);
-        hotbar.setWidth(HOTBAR_WIDTH);
-        hotbar.setHeight(HOTBAR_HEIGHT);
-        guiNode.attachChild(hotbar);
+    private void initHotbar(Application app) {
+        // Calcular a largura de UM quadrado baseado na largura total desejada / 9
+        float slotWidth = HOTBAR_WIDTH / 9f;
+
+        // Criar os 9 slots individuais
+        for (int i = 0; i < 9; i++) {
+            Picture slot = new Picture("HotbarSlot_" + i);
+            // AQUI: Certifica-te que tens a imagem 'hotbarsquare.png' na pasta Interface
+            slot.setImage(assetManager, "Interface/hotbarsquare.png", true);
+
+            slot.setWidth(slotWidth);
+            slot.setHeight(HOTBAR_HEIGHT);
+
+            guiNode.attachChild(slot);
+            hotbarSlots.add(slot);
+        }
 
         // Criar a imagem do Selector (o quadrado que se move)
         selector = new Picture("Selector");
         selector.setImage(assetManager, "Interface/selector.png", true);
-        // O selector é 1/9 da largura da hotbar (assumindo 9 slots)
-        float slotSize = HOTBAR_WIDTH / 9f;
-        selector.setWidth(slotSize);
-        selector.setHeight(HOTBAR_HEIGHT); // Ou ligeiramente maior para destaque
+
+        // O selector deve ter o mesmo tamanho que um slot individual
+        selector.setWidth(slotWidth);
+        selector.setHeight(HOTBAR_HEIGHT);
+
+        // Adicionamos o selector DEPOIS dos slots para ele ficar "em cima" visualmente
         guiNode.attachChild(selector);
     }
-    private void Hearts(Application app) {
+    private void initHearts(Application app) {
         // Criar 10 corações
         for (int i = 0; i < 10; i++) {
             Picture heart = new Picture("Heart_" + i);
@@ -91,23 +102,36 @@ public class HudAppState extends BaseAppState {
         float chY = (screenH + crosshair.getLineHeight()) / 2f;
         crosshair.setLocalTranslation(chX, chY, 0);
 
-        // 2. Posicionar Hotbar (Em baixo, ao centro)
-        float hotbarX = (screenW / 2f) - (HOTBAR_WIDTH / 2f);
+        // --- Posicionamento da Hotbar ---
+        // Largura de cada slot individual
+        float slotWidth = HOTBAR_WIDTH / 9f;
+
+        // Ponto de partida X (para ficar centrado no ecrã)
+        float startX = (screenW / 2f) - (HOTBAR_WIDTH / 2f);
         float hotbarY = 10f; // Margem do fundo
-        hotbar.setPosition(hotbarX, hotbarY);
 
-        // Posicionar Selector (por defeito no primeiro slot)
-        // Futuramente podes mudar isto com base numa variável 'currentSlot'
-        selector.setPosition(hotbarX, hotbarY);
+        // Atualizar posição de cada quadrado da hotbar
+        for (int i = 0; i < hotbarSlots.size(); i++) {
+            Picture slot = hotbarSlots.get(i);
+            // A posição X é o inicio + (índice * largura).
+            // Como não adicionamos margem extra, eles ficam colados.
+            float x = startX + (i * slotWidth);
+            slot.setPosition(x, hotbarY);
+        }
 
-        // 3. Posicionar Corações (Em cima da hotbar)
-        float heartsStartX = hotbarX;
+        // Posicionar Selector (por defeito no primeiro slot - índice 0)
+        // Futuramente podes trocar o '0' por uma variável 'selectedSlot'
+        int currentSlotIndex = 0;
+        float selectorX = startX + (currentSlotIndex * slotWidth);
+        selector.setPosition(selectorX, hotbarY);
+
+        // --- Posicionamento dos Corações ---
+        float heartsStartX = startX;
         float heartsY = hotbarY + HOTBAR_HEIGHT + 10f; // 10px acima da hotbar
 
         for (int i = 0; i < hearts.size(); i++) {
             Picture heart = hearts.get(i);
-            // Espaçamento simples entre corações
-            float x = heartsStartX + (i * (HEART_SIZE + 2f));
+            float x = heartsStartX + (i * (HEART_SIZE + 2f)); // Pequeno espaço entre corações
             heart.setPosition(x, heartsY);
         }
     }
@@ -130,15 +154,24 @@ public class HudAppState extends BaseAppState {
 
     @Override
     protected void cleanup(Application app) {
-
         if (crosshair != null) crosshair.removeFromParent();
-        if (hotbar != null) hotbar.removeFromParent();
+
+        // Remover todos os slots
+        for (Picture slot : hotbarSlots) {
+            slot.removeFromParent();
+        }
+        hotbarSlots.clear();
+
         if (selector != null) selector.removeFromParent();
+
+        // Remover corações
         for (Picture p : hearts) {
             p.removeFromParent();
         }
         hearts.clear();
     }
+
+
 
     @Override
     protected void onEnable() { }

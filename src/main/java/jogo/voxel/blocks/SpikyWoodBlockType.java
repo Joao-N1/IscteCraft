@@ -20,4 +20,9 @@ public class SpikyWoodBlockType extends VoxelBlockType {
         m.setFloat("Shininess", 12f);
         return m;
     }
+
+    @Override
+    public float getHardness() {
+        return 3.0f;
+    }
 }

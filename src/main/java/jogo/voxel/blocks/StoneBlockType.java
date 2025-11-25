@@ -24,4 +24,9 @@ public class StoneBlockType extends VoxelBlockType {
         m.setFloat("Shininess", 32f); // tighter, less intense highlight
         return m;
     }
+
+    @Override
+    public float getHardness() {
+        return 10.50f;
+    }
 }

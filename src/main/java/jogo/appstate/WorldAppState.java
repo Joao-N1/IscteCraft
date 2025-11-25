@@ -22,6 +22,9 @@ public class WorldAppState extends BaseAppState {
     private final InputAppState input;
     private PlayerAppState playerAppState;
 
+    private float breakTimer = 0f;
+    private VoxelWorld.Vector3i lastTargetBlock = null;
+
     // world root for easy cleanup
     private Node worldNode;
     private VoxelWorld voxelWorld;
@@ -76,16 +79,57 @@ public class WorldAppState extends BaseAppState {
 
     @Override
     public void update(float tpf) {
-        if (input != null && input.isMouseCaptured() && input.consumeBreakRequested()) {
+        // Verifica se o input está ativo e se o jogador está a segurar o botão de partir
+        if (input != null && input.isMouseCaptured() && input.isBreaking()) {
+
+            // Obtêm o que estamos a olhar
             var pick = voxelWorld.pickFirstSolid(cam, 6f);
-            pick.ifPresent(hit -> {
-                VoxelWorld.Vector3i cell = hit.cell;
-                if (voxelWorld.breakAt(cell.x, cell.y, cell.z)) {
-                    voxelWorld.rebuildDirtyChunks(physicsSpace);
-                    playerAppState.refreshPhysics();
+
+            if (pick.isPresent()) {
+                var hit = pick.get();
+                VoxelWorld.Vector3i currentTarget = hit.cell;
+
+                // Se estamos a olhar para o mesmo bloco que no frame anterior
+                if (lastTargetBlock != null &&
+                        currentTarget.x == lastTargetBlock.x &&
+                        currentTarget.y == lastTargetBlock.y &&
+                        currentTarget.z == lastTargetBlock.z) {
+
+                    // Acumular tempo
+                    breakTimer += tpf;
+
+                    // Obter o tipo de bloco
+                    byte blockId = voxelWorld.getBlock(currentTarget.x, currentTarget.y, currentTarget.z);
+                    var blockType = voxelWorld.getPalette().get(blockId);
+
+                    // Parte se o tempo for maior que o da dureza
+                    if (breakTimer >= blockType.getHardness()) {
+                        if (voxelWorld.breakAt(currentTarget.x, currentTarget.y, currentTarget.z)) {
+                            voxelWorld.rebuildDirtyChunks(physicsSpace);
+                            playerAppState.refreshPhysics();
+                            System.out.println("Bloco partido: " + blockType.getName());
+                        }
+                        // Reset ao timer e ao bloco para não partir o próximo instantaneamente
+                        breakTimer = 0f;
+                        lastTargetBlock = null;
+                    }
+                } else {
+                    // reinicia o timer para o novo bloco
+                    lastTargetBlock = currentTarget;
+                    breakTimer = 0f;
                 }
-            });
+            } else {
+                // A olhar para o ar
+                breakTimer = 0f;
+                lastTargetBlock = null;
+            }
+        } else {
+            // Se o mouse tiver largado
+            breakTimer = 0f;
+            lastTargetBlock = null;
         }
+
+
         if (input != null && input.consumeToggleShadingRequested()) {
             voxelWorld.toggleRenderDebug();
         }

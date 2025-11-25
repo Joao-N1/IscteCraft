@@ -21,4 +21,9 @@ public class WoodBlockType extends VoxelBlockType {
 
         return m;
     }
+
+    @Override
+    public float getHardness() {
+        return 3.0f;
+    }
 }

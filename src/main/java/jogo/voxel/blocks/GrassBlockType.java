@@ -21,5 +21,9 @@ public class GrassBlockType extends VoxelBlockType {
         m.setFloat("Shininess", 16f);
         return m;
     }
+    @Override
+    public float getHardness() {
+        return 1.00f;
+    }
 }
 

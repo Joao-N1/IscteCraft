@@ -33,7 +33,7 @@ public class PlayerAppState extends BaseAppState {
     // tuning
     private float moveSpeed = 8.0f; // m/s
     private float sprintMultiplier = 1.7f;
-    private float mouseSensitivity = 30f; // degrees per mouse analog unit
+    private float mouseSensitivity = 40f; // degrees per mouse analog unit
     private float eyeHeight = 1.7f;
 
     private Vector3f spawnPosition = new Vector3f(25.5f, 12f, 25.5f);

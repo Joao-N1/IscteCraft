@@ -21,5 +21,10 @@ public class DirtBlockType extends VoxelBlockType {
         m.setFloat("Shininess", 8f);
         return m;
     }
+
+    @Override
+    public float getHardness() {
+        return 1.00f;
+    }
 }
 

@@ -23,6 +23,7 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
     private volatile boolean interactRequested;
     private float mouseDX, mouseDY;
     private boolean mouseCaptured = true;
+    private boolean breaking = false;
 
     @Override
     protected void initialize(Application app) {
@@ -98,7 +99,12 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
                 if (isPressed) setMouseCaptured(!mouseCaptured);
             }
             case "Break" -> {
-                if (isPressed && mouseCaptured) breakRequested = true;
+                if (mouseCaptured) {
+                    breaking = isPressed;
+                    if (isPressed) breakRequested = true;
+                } else {
+                    breaking = false;
+                }
             }
             case "ToggleShading" -> {
                 if (isPressed) toggleShadingRequested = true;
@@ -181,5 +187,9 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
 
     public boolean isMouseCaptured() {
         return mouseCaptured;
+    }
+
+    public boolean isBreaking() {
+        return breaking;
     }
 }

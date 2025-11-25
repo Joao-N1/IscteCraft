@@ -17,6 +17,11 @@ public abstract class VoxelBlockType {
     /** Whether this block is physically solid (collides/occludes). */
     public boolean isSolid() { return true; }
 
+    //define o tempo para partir os blocos
+    public float getHardness() {
+        return 0.1f; // Valor padrão (muito rápido)
+    }
+
     /**
      * Returns the Material for this block type. Override in subclasses for custom materials.
      */
