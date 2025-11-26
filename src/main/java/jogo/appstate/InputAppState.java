@@ -24,6 +24,8 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
     private float mouseDX, mouseDY;
     private boolean mouseCaptured = true;
     private boolean breaking = false;
+    private volatile boolean inventoryRequested;
+    private int hotbarRequest = -1;
 
     @Override
     protected void initialize(Application app) {
@@ -53,6 +55,15 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
 
         im.addListener(this, "MoveForward", "MoveBackward", "MoveLeft", "MoveRight", "Jump", "Sprint", "ToggleMouse", "Break", "ToggleShading", "Respawn", "Interact");
         im.addListener(this, "MouseX+", "MouseX-", "MouseY+", "MouseY-");
+
+        im.addMapping("OpenInventory", new KeyTrigger(KeyInput.KEY_I));
+        im.addListener(this, "OpenInventory");
+
+        for (int i = 0; i < 9; i++) {
+            // KEY_1 começa no código 0x02. O loop mapeia 1->slot 0, 2->slot 1, etc.
+            im.addMapping("HotbarSlot_" + i, new KeyTrigger(KeyInput.KEY_1 + i));
+            im.addListener(this, "HotbarSlot_" + i);
+        }
     }
 
     @Override
@@ -86,6 +97,13 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
 
     @Override
     public void onAction(String name, boolean isPressed, float tpf) {
+        if (isPressed && name.startsWith("HotbarSlot_")) {
+            System.out.println("Tecla pressionada: " + name); // Debug
+            try {
+                hotbarRequest = Integer.parseInt(name.split("_")[1]);
+            } catch (NumberFormatException e) { }
+            return;
+        }
         switch (name) {
             case "MoveForward" -> forward = isPressed;
             case "MoveBackward" -> backward = isPressed;
@@ -114,6 +132,9 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
             }
             case "Interact" -> {
                 if (isPressed && mouseCaptured) interactRequested = true;
+            }
+            case "OpenInventory" -> {
+                if (isPressed) inventoryRequested = true;
             }
         }
     }
@@ -191,5 +212,17 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
 
     public boolean isBreaking() {
         return breaking;
+    }
+
+    public boolean consumeInventoryRequest() {
+        boolean r = inventoryRequested;
+        inventoryRequested = false;
+        return r;
+    }
+
+    public int consumeHotbarRequest() {
+        int r = hotbarRequest;
+        hotbarRequest = -1;
+        return r;
     }
 }

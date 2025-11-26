@@ -39,6 +39,9 @@ public class PlayerAppState extends BaseAppState {
     private Vector3f spawnPosition = new Vector3f(25.5f, 12f, 25.5f);
     private PointLight playerLight;
 
+    private HudAppState hud;
+    private boolean inventoryOpen = false;
+
     public PlayerAppState(Node rootNode, AssetManager assetManager, Camera cam, InputAppState input, PhysicsSpace physicsSpace, WorldAppState world) {
         this.rootNode = rootNode;
         this.assetManager = assetManager;
@@ -83,6 +86,8 @@ public class PlayerAppState extends BaseAppState {
         // Look slightly downward so ground is visible immediately
         this.pitch = -0.35f;
         applyViewToCamera();
+
+        hud = getState(HudAppState.class);
     }
 
     @Override
@@ -92,6 +97,32 @@ public class PlayerAppState extends BaseAppState {
             // refresh spawn from world in case terrain changed
             if (world != null) spawnPosition = world.getRecommendedSpawnPosition();
             respawn();
+        }
+        // 1. Verificar se o jogador quer abrir/fechar inventário ('I')
+        if (input.consumeInventoryRequest()) {
+            inventoryOpen = !inventoryOpen;
+
+            // Atualizar HUD
+            if (hud != null) hud.setInventoryVisible(inventoryOpen);
+
+            // Atualizar Rato:
+            // Se inventário aberto -> Rato Solto (false no captured) para clicar
+            // Se inventário fechado -> Rato Preso (true no captured) para olhar
+            input.setMouseCaptured(!inventoryOpen);
+        }
+
+        // 2. Verificar input da Hotbar (Teclas 1-9)
+        // Só permitimos mudar a hotbar se o inventário estiver FECHADO (opcional)
+        // Mas geralmente em jogos podes mudar a seleção mesmo com ele aberto.
+        int requestedSlot = input.consumeHotbarRequest();
+        if (requestedSlot != -1) {
+            System.out.println("Mudar para slot: " + requestedSlot);
+            player.setSelectedSlot(requestedSlot);
+
+            // Avisar o HUD para mover o quadrado
+            if (hud != null) {
+                hud.updateSelector(player.getSelectedSlot());
+            }
         }
 
         // pause controls if mouse not captured

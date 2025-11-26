@@ -24,9 +24,15 @@ public class HudAppState extends BaseAppState {
     private Picture selector;
     private List<Picture> hearts = new ArrayList<>();
 
+    // --- NOVO: Inventário ---
+    private Node inventoryNode = new Node("InventoryNode");
+    private List<Picture> mainInvSlots = new ArrayList<>();
+    private boolean isInventoryVisible = false;
+    private int currentSlotIndex = 0;
+
     // Tamanho dos elementos da interface
     private final float HOTBAR_WIDTH = 400f;
-    private final float HOTBAR_HEIGHT = 50f;
+    private final float HOTBAR_HEIGHT = 44f;
     private final float HEART_SIZE = 20f;
 
     public HudAppState(Node guiNode, AssetManager assetManager) {
@@ -44,6 +50,7 @@ public class HudAppState extends BaseAppState {
         centerCrosshair();
         initHotbar(app);
         initHearts(app);
+        initInventory(app);
         refreshLayout();
         System.out.println("HudAppState initialized: UI elements attached");
     }
@@ -88,6 +95,45 @@ public class HudAppState extends BaseAppState {
         }
     }
 
+    // --- NOVO: Criar os 27 slots do inventário ---
+    private void initInventory(Application app) {
+        float slotSize = HOTBAR_WIDTH / 9f; // Mesmo tamanho da hotbar
+
+        // 3 linhas, 9 colunas
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                Picture slot = new Picture("InvSlot_" + row + "_" + col);
+                slot.setImage(assetManager, "Interface/hotbarsquare.png", true);
+                slot.setWidth(slotSize);
+                slot.setHeight(slotSize); // Quadrado
+
+                inventoryNode.attachChild(slot);
+                mainInvSlots.add(slot);
+            }
+        }
+        // Nota: Não fazemos guiNode.attachChild(inventoryNode) aqui.
+        // Só fazemos quando o jogador abrir o inventário.
+    }
+
+    public void setInventoryVisible(boolean visible) {
+        this.isInventoryVisible = visible;
+        if (visible) {
+            guiNode.attachChild(inventoryNode);
+            // Esconder a mira quando inventário está aberto
+            crosshair.removeFromParent();
+        } else {
+            inventoryNode.removeFromParent();
+            // Mostrar a mira de volta
+            guiNode.attachChild(crosshair);
+        }
+    }
+
+    // --- CORREÇÃO: Atualizar a variável e forçar refresh ---
+    public void updateSelector(int slotIndex) {
+        this.currentSlotIndex = slotIndex; // Guardar o novo índice
+        refreshLayout(); // Atualizar visual imediatamente
+    }
+
     /**
      * Recalcula as posições baseado no tamanho atual da janela.
      * Importante se o jogador redimensionar a janela.
@@ -119,11 +165,10 @@ public class HudAppState extends BaseAppState {
             slot.setPosition(x, hotbarY);
         }
 
-        // Posicionar Selector (por defeito no primeiro slot - índice 0)
-        // Futuramente podes trocar o '0' por uma variável 'selectedSlot'
-        int currentSlotIndex = 0;
+        // --- CORREÇÃO: Usar a variável currentSlotIndex ---
         float selectorX = startX + (currentSlotIndex * slotWidth);
         selector.setPosition(selectorX, hotbarY);
+        // ----
 
         // --- Posicionamento dos Corações ---
         float heartsStartX = startX;
@@ -133,6 +178,23 @@ public class HudAppState extends BaseAppState {
             Picture heart = hearts.get(i);
             float x = heartsStartX + (i * (HEART_SIZE + 2f)); // Pequeno espaço entre corações
             heart.setPosition(x, heartsY);
+        }
+        // --- Layout do Inventário (Centrado na tela, acima da hotbar) ---
+        float invStartY = heartsY + 50f; // Um pouco acima dos corações
+
+        // O array mainInvSlots foi preenchido linha a linha.
+        // Linha 0 é a de baixo do inventário principal
+        for (int i = 0; i < mainInvSlots.size(); i++) {
+            int row = i / 9; // 0, 1 ou 2
+            int col = i % 9; // 0 a 8
+
+            Picture slot = mainInvSlots.get(i);
+            float x = startX + (col * slotWidth);
+            // Inverter row para desenhar de baixo para cima ou ajustar conforme preferência
+            // Vamos desenhar: Linha 2 (topo), Linha 1 (meio), Linha 0 (baixo)
+            float y = invStartY + ((2 - row) * slotWidth);
+
+            slot.setPosition(x, y);
         }
     }
 
@@ -169,6 +231,8 @@ public class HudAppState extends BaseAppState {
             p.removeFromParent();
         }
         hearts.clear();
+        inventoryNode.removeFromParent();
+        inventoryNode.detachAllChildren();
     }
 
 
