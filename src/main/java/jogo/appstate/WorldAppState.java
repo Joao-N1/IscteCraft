@@ -79,59 +79,62 @@ public class WorldAppState extends BaseAppState {
 
     @Override
     public void update(float tpf) {
-        // Verifica se o input está ativo e se o jogador está a segurar o botão de partir
-        if (input != null && input.isMouseCaptured() && input.isBreaking()) {
+        if (input == null || !input.isMouseCaptured()) {
+            breakTimer = 0f;
+            lastTargetBlock = null;
+            return;
+        }
 
-            // Obtêm o que estamos a olhar
-            var pick = voxelWorld.pickFirstSolid(cam, 6f);
+        // Permitir alternar shading mesmo quando não se está a partir
+        if (input.consumeToggleShadingRequested()) {
+            voxelWorld.toggleRenderDebug();
+        }
 
-            if (pick.isPresent()) {
-                var hit = pick.get();
-                VoxelWorld.Vector3i currentTarget = hit.cell;
+        if (!input.isBreaking()) {
+            breakTimer = 0f;
+            lastTargetBlock = null;
+            return;
+        }
 
-                // Se estamos a olhar para o mesmo bloco que no frame anterior
-                if (lastTargetBlock != null &&
-                        currentTarget.x == lastTargetBlock.x &&
-                        currentTarget.y == lastTargetBlock.y &&
-                        currentTarget.z == lastTargetBlock.z) {
+        var pick = voxelWorld.pickFirstSolid(cam, 6f);
+        if (pick.isEmpty()) {
+            breakTimer = 0f;
+            lastTargetBlock = null;
+            return;
+        }
 
-                    // Acumular tempo
-                    breakTimer += tpf;
+        var hit = pick.get();
+        VoxelWorld.Vector3i currentTarget = hit.cell;
 
-                    // Obter o tipo de bloco
-                    byte blockId = voxelWorld.getBlock(currentTarget.x, currentTarget.y, currentTarget.z);
-                    var blockType = voxelWorld.getPalette().get(blockId);
+        if (lastTargetBlock != null &&
+                currentTarget.x == lastTargetBlock.x &&
+                currentTarget.y == lastTargetBlock.y &&
+                currentTarget.z == lastTargetBlock.z) {
+            // Continuar a acumular tempo para partir o mesmo bloco
+            breakTimer += tpf;
+        } else {
+            // Começar a partir de um novo bloco
+            lastTargetBlock = currentTarget;
+            breakTimer = tpf; // conta já este frame
+        }
 
-                    // Parte se o tempo for maior que o da dureza
-                    if (breakTimer >= blockType.getHardness()) {
-                        if (voxelWorld.breakAt(currentTarget.x, currentTarget.y, currentTarget.z)) {
-                            voxelWorld.rebuildDirtyChunks(physicsSpace);
-                            playerAppState.refreshPhysics();
-                            System.out.println("Bloco partido: " + blockType.getName());
-                        }
-                        // Reset ao timer e ao bloco para não partir o próximo instantaneamente
-                        breakTimer = 0f;
-                        lastTargetBlock = null;
+        byte blockId = voxelWorld.getBlock(currentTarget.x, currentTarget.y, currentTarget.z);
+        var blockType = voxelWorld.getPalette().get(blockId);
+
+        if (breakTimer >= blockType.getHardness()) {
+            if (voxelWorld.breakAt(currentTarget.x, currentTarget.y, currentTarget.z)) {
+                voxelWorld.rebuildDirtyChunks(physicsSpace);
+                if (playerAppState != null) {
+                    playerAppState.refreshPhysics();
+                    System.out.println("Bloco partido: " + blockType.getName());
+                    boolean success = playerAppState.getPlayer().addItem(blockId, 1);
+                    if (success) {
+                        System.out.println("Apanhaste: " + blockType.getName());
                     }
-                } else {
-                    // reinicia o timer para o novo bloco
-                    lastTargetBlock = currentTarget;
-                    breakTimer = 0f;
                 }
-            } else {
-                // A olhar para o ar
                 breakTimer = 0f;
                 lastTargetBlock = null;
             }
-        } else {
-            // Se o mouse tiver largado
-            breakTimer = 0f;
-            lastTargetBlock = null;
-        }
-
-
-        if (input != null && input.consumeToggleShadingRequested()) {
-            voxelWorld.toggleRenderDebug();
         }
     }
 

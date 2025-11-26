@@ -42,6 +42,10 @@ public class PlayerAppState extends BaseAppState {
     private HudAppState hud;
     private boolean inventoryOpen = false;
 
+    public Player getPlayer() {
+        return player;
+    }
+
     public PlayerAppState(Node rootNode, AssetManager assetManager, Camera cam, InputAppState input, PhysicsSpace physicsSpace, WorldAppState world) {
         this.rootNode = rootNode;
         this.assetManager = assetManager;
@@ -50,6 +54,7 @@ public class PlayerAppState extends BaseAppState {
         this.physicsSpace = physicsSpace;
         this.world = world;
         world.registerPlayerAppState(this);
+
     }
 
     @Override

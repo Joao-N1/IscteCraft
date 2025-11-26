@@ -8,7 +8,10 @@ import com.jme3.font.BitmapFont;
 import com.jme3.font.BitmapText;
 import com.jme3.scene.Node;
 import com.jme3.ui.Picture;
-
+import com.jme3.math.ColorRGBA;
+import jogo.gameobject.character.Player;
+import jogo.gameobject.item.ItemStack;
+import jogo.voxel.VoxelPalette;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,14 +24,19 @@ public class HudAppState extends BaseAppState {
     private BitmapText crosshair;
 
     private List<Picture> hotbarSlots = new ArrayList<>();
+    private List<BitmapText> hotbarTexts = new ArrayList<>(); // Textos de quantidade
+    private List<Picture> hotbarIcons = new ArrayList<>();
     private Picture selector;
     private List<Picture> hearts = new ArrayList<>();
 
     // --- NOVO: Inventário ---
     private Node inventoryNode = new Node("InventoryNode");
     private List<Picture> mainInvSlots = new ArrayList<>();
+    private List<BitmapText> mainInvTexts = new ArrayList<>();
+    private List<Picture> mainInvIcons = new ArrayList<>();
     private boolean isInventoryVisible = false;
     private int currentSlotIndex = 0;
+    private BitmapFont guiFont;
 
     // Tamanho dos elementos da interface
     private final float HOTBAR_WIDTH = 400f;
@@ -42,10 +50,10 @@ public class HudAppState extends BaseAppState {
 
     @Override
     protected void initialize(Application app) {
-        BitmapFont font = assetManager.loadFont("Interface/Fonts/Default.fnt");
-        crosshair = new BitmapText(font, false);
+        guiFont = assetManager.loadFont("Interface/Fonts/Default.fnt");
+        crosshair = new BitmapText(guiFont, false);
         crosshair.setText("+");
-        crosshair.setSize(font.getCharSet().getRenderedSize() * 2f);
+        crosshair.setSize(guiFont.getCharSet().getRenderedSize() * 2f);
         guiNode.attachChild(crosshair);
         centerCrosshair();
         initHotbar(app);
@@ -69,6 +77,21 @@ public class HudAppState extends BaseAppState {
 
             guiNode.attachChild(slot);
             hotbarSlots.add(slot);
+
+            // Ícone do Item (Inicia vazio/invisível)
+            Picture icon = new Picture("HotbarIcon_" + i);
+            icon.setWidth(slotWidth * 0.6f); // Um pouco menor que o slot
+            icon.setHeight(HOTBAR_HEIGHT * 0.6f);
+            guiNode.attachChild(icon);
+            hotbarIcons.add(icon);
+
+            // Texto de Quantidade
+            BitmapText count = new BitmapText(guiFont, false);
+            count.setSize(guiFont.getCharSet().getRenderedSize() * 0.8f); // Texto pequeno
+            count.setColor(ColorRGBA.White);
+            count.setText(""); // Vazio por defeito
+            guiNode.attachChild(count);
+            hotbarTexts.add(count);
         }
 
         // Criar a imagem do Selector (o quadrado que se move)
@@ -109,6 +132,21 @@ public class HudAppState extends BaseAppState {
 
                 inventoryNode.attachChild(slot);
                 mainInvSlots.add(slot);
+
+                // Ícone
+                Picture icon = new Picture("InvIcon_" + row + "_" + col);
+                icon.setWidth(slotSize * 0.6f);
+                icon.setHeight(slotSize * 0.6f);
+                inventoryNode.attachChild(icon); // Adicionar ao nó do inventário
+                mainInvIcons.add(icon);
+
+                // Texto
+                BitmapText count = new BitmapText(guiFont, false);
+                count.setSize(guiFont.getCharSet().getRenderedSize() * 0.8f);
+                count.setColor(ColorRGBA.White);
+                count.setText("");
+                inventoryNode.attachChild(count);
+                mainInvTexts.add(count);
             }
         }
         // Nota: Não fazemos guiNode.attachChild(inventoryNode) aqui.
@@ -133,6 +171,69 @@ public class HudAppState extends BaseAppState {
         this.currentSlotIndex = slotIndex; // Guardar o novo índice
         refreshLayout(); // Atualizar visual imediatamente
     }
+
+    // --- LÓGICA DE DESENHAR ITENS E NÚMEROS ---
+    public void updateInventoryDisplay(Player player) {
+        // Atualizar Hotbar
+        updateSlotList(player.getHotbar(), hotbarSlots, hotbarIcons, hotbarTexts, 0f);
+
+        // Atualizar Inventário Principal
+        if (isInventoryVisible) {
+            updateSlotList(player.getMainInventory(), mainInvSlots, mainInvIcons, mainInvTexts, 0f);
+        }
+    }
+
+    private void updateSlotList(ItemStack[] items, List<Picture> bgList, List<Picture> iconList, List<BitmapText> textList, float yOffset) {
+        for (int i = 0; i < items.length; i++) {
+            ItemStack stack = items[i];
+            Picture icon = iconList.get(i);
+            BitmapText text = textList.get(i);
+            Picture bg = bgList.get(i); // Precisamos da posição do fundo para alinhar
+
+            if (stack != null && stack.getAmount() > 0) {
+                // 1. Atualizar Textura do Ícone
+                // Nota: Aqui precisas de uma maneira de converter ID para Texture Path.
+                // Como exemplo simples, vou assumir nomes diretos ou usar um switch:
+                String texName = getTextureNameById(stack.getId());
+                try {
+                    icon.setImage(assetManager, "Textures/" + texName, true);
+                    icon.setCullHint(Node.CullHint.Never); // Mostrar
+                } catch (Exception e) { icon.setCullHint(Node.CullHint.Always); }
+
+                // Posicionar ícone no centro do slot
+                float x = bg.getLocalTranslation().x + (bg.getWidth() - icon.getWidth()) / 2f;
+                float y = bg.getLocalTranslation().y + (bg.getHeight() - icon.getHeight()) / 2f;
+                icon.setPosition(x, y);
+
+                // 2. Atualizar Texto da Quantidade
+                if (stack.getAmount() > 1) {
+                    text.setText(String.valueOf(stack.getAmount()));
+                    // Posicionar no canto inferior direito do slot
+                    float tx = bg.getLocalTranslation().x + bg.getWidth() - text.getLineWidth() - 2f;
+                    float ty = bg.getLocalTranslation().y + text.getLineHeight();
+                    text.setLocalTranslation(tx, ty, 1); // Z=1 para ficar em cima
+                } else {
+                    text.setText("");
+                }
+            } else {
+                // Slot vazio
+                icon.setCullHint(Node.CullHint.Always); // Esconder
+                text.setText("");
+            }
+        }
+    }
+
+    // Método auxiliar simples (Idealmente estaria no VoxelBlockType)
+    private String getTextureNameById(byte id) {
+        if (id == VoxelPalette.DIRT_ID) return "DirtBlock.png";
+        if (id == VoxelPalette.GRASS_ID) return "GrassBlock.png";
+        if (id == VoxelPalette.STONE_ID) return "StoneBlock.png";
+        if (id == VoxelPalette.Wood_ID) return "WoodBlock.png";
+        if (id == VoxelPalette.Leaf_ID) return "LeafBlock.png";
+        if (id == VoxelPalette.SpikyWood_ID) return "SpikyWoodBlock.png";
+        return "DirtBlock.png"; // Fallback
+    }
+    // ------------------------------------------
 
     /**
      * Recalcula as posições baseado no tamanho atual da janela.
@@ -196,6 +297,11 @@ public class HudAppState extends BaseAppState {
 
             slot.setPosition(x, y);
         }
+        // --- IMPORTANTE: Atualizar os ícones e textos ---
+                PlayerAppState playerState = getState(PlayerAppState.class);
+        if (playerState != null && playerState.getPlayer() != null) {
+            updateInventoryDisplay(playerState.getPlayer());
+        }
     }
 
     private void centerCrosshair() {
@@ -218,11 +324,11 @@ public class HudAppState extends BaseAppState {
     protected void cleanup(Application app) {
         if (crosshair != null) crosshair.removeFromParent();
 
-        // Remover todos os slots
-        for (Picture slot : hotbarSlots) {
-            slot.removeFromParent();
-        }
-        hotbarSlots.clear();
+        // Limpar tudo
+        if(crosshair != null) crosshair.removeFromParent();
+        hotbarSlots.forEach(Picture::removeFromParent);
+        hotbarIcons.forEach(Picture::removeFromParent);
+        hotbarTexts.forEach(BitmapText::removeFromParent);
 
         if (selector != null) selector.removeFromParent();
 

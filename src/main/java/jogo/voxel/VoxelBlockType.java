@@ -35,4 +35,6 @@ public abstract class VoxelBlockType {
     public Material getMaterial(AssetManager assetManager, jogo.framework.math.Vec3 blockPos) {
         return getMaterial(assetManager);
     }
+
 }
+
