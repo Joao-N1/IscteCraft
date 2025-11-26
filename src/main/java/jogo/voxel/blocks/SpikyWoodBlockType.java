@@ -25,4 +25,7 @@ public class SpikyWoodBlockType extends VoxelBlockType {
     public float getHardness() {
         return 3.0f;
     }
+
+    @Override
+    public int getContactDamage() {return 10;}
 }

@@ -12,6 +12,8 @@ import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import jogo.gameobject.character.Player;
+import jogo.voxel.VoxelPalette;
+import jogo.voxel.VoxelWorld;
 
 public class PlayerAppState extends BaseAppState {
 
@@ -29,6 +31,10 @@ public class PlayerAppState extends BaseAppState {
     // view angles
     private float yaw = 0f;
     private float pitch = 0f;
+
+    private HudAppState hudAppState;
+    private float damageCooldown = 0f;
+    private final float INVULNERABILITY_TIME = 1.0f;
 
     // tuning
     private float moveSpeed = 8.0f; // m/s
@@ -92,7 +98,17 @@ public class PlayerAppState extends BaseAppState {
         this.pitch = -0.35f;
         applyViewToCamera();
 
+        //----------------------------------------------------------------
+
+        // Obter referência para o HUD para atualizar a vida
         hud = getState(HudAppState.class);
+
+        // Obter referência para o HUD para atualizar a vida
+        hudAppState = getState(HudAppState.class);
+
+        // Assegurar que o player começa com vida cheia
+        if(player != null) player.setHealth(100);
+        updateHud();
     }
 
     @Override
@@ -168,11 +184,111 @@ public class PlayerAppState extends BaseAppState {
 
         // update light to follow head
         if (playerLight != null) playerLight.setPosition(playerNode.getWorldTranslation().add(0, eyeHeight, 0));
+
+        // --- LÓGICA DE DANO AMBIENTAL ---
+        checkEnvironmentalDamage(tpf);
+    }
+
+    //Verifica os blocos à volta do jogador (pés e cabeça) para ver se leva dano
+    private void checkEnvironmentalDamage(float tpf) {
+        // Se estiver em cooldown (invulnerável), reduz o timer e sai
+        if (damageCooldown > 0) {
+            damageCooldown -= tpf;
+            return;
+        }
+        if (world == null || player == null) return;
+        VoxelWorld voxelWorld = world.getVoxelWorld();
+        if (voxelWorld == null) return;
+
+        // Posição do jogador
+        Vector3f pos = playerNode.getWorldTranslation();
+        // Verificar uma pequena área à volta do jogador (bounding box simples)
+        // O jogador tem ~0.8 de largura e 1.8 de altura. Vamos verificar blocos que ele possa estar a tocar.
+        // Convertemos coordenadas do mundo para coordenadas inteiras (voxels)
+
+        int minX = (int) Math.floor(pos.x - 0.5f);
+        int maxX = (int) Math.floor(pos.x + 0.5f);
+        int minZ = (int) Math.floor(pos.z - 0.5f);
+        int maxZ = (int) Math.floor(pos.z + 0.5f);
+
+        // Verifica nos pés (y) e no tronco (y+1)
+        int feetY = (int) Math.floor(pos.y);
+        int headY = (int) Math.floor(pos.y + 1f);
+
+        boolean tookDamage = false;
+
+        // Loop pelos blocos vizinhos
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                // Verificar bloco nos pés e na cabeça
+                tookDamage |= checkBlockDamage(voxelWorld, x, feetY, z);
+                tookDamage |= checkBlockDamage(voxelWorld, x, headY, z);
+
+                if (tookDamage) break; // Se já levou dano, não precisa verificar mais
+            }
+            if (tookDamage) break;
+        }
+    }
+
+    //Vê se um bloco específico numa coordenada tem dano de contacto
+    private boolean checkBlockDamage(VoxelWorld vw, int x, int y, int z) {
+        byte id = vw.getBlock(x, y, z);
+        if (id == VoxelPalette.AIR_ID) return false;
+
+        var blockType = vw.getPalette().get(id);
+        int damage = blockType.getContactDamage();
+
+        if (damage > 0) {
+            takeDamage(damage);
+            return true;
+        }
+        return false;
+    }
+
+    //Retira vida, ativa invencibilidade temporária e verifica se morreu
+    public void takeDamage(int amount) {
+        if (damageCooldown > 0) return; // Segurança extra
+
+        int currentHealth = player.getHealth();
+        currentHealth -= amount;
+        player.setHealth(currentHealth);
+
+        System.out.println("Dano: " + amount + ". Vida atual: " + currentHealth);
+
+        // Atualiza o HUD
+        updateHud();
+
+        // Verifica Morte
+        if (currentHealth <= 0) {
+            System.out.println("Jogador morreu!");
+            respawn();
+            // O respawn() está definido abaixo, vamos garantir que reseta a vida
+        } else {
+            // Ativa invencibilidade temporária
+            damageCooldown = INVULNERABILITY_TIME;
+
+            // Opcional: Efeito visual de "empurrão" (Knockback)
+            // characterControl.applyCentralImpulse(...) // Requer ajustes na física
+        }
+    }
+
+    private void updateHud() {
+        if (hud != null && player != null) {
+            hud.setHealth(player.getHealth());
+        }
     }
 
     private void respawn() {
         characterControl.setWalkDirection(Vector3f.ZERO);
         characterControl.warp(spawnPosition);
+
+        //Reseta a vida do jogador
+        if (player != null) {
+            player.setHealth(100);
+        }
+        updateHud(); // Atualiza HUD para cheio
+        damageCooldown = 0f; // Remove cooldown se houver
+
         // Reset look
         this.pitch = -0.35f;
         applyViewToCamera();

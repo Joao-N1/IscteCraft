@@ -36,5 +36,8 @@ public abstract class VoxelBlockType {
         return getMaterial(assetManager);
     }
 
+    public int getContactDamage() {
+        return 0;
+    }
 }
 

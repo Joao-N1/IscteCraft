@@ -7,6 +7,7 @@ import com.jme3.asset.AssetManager;
 import com.jme3.font.BitmapFont;
 import com.jme3.font.BitmapText;
 import com.jme3.scene.Node;
+import com.jme3.texture.Texture2D;
 import com.jme3.ui.Picture;
 import com.jme3.math.ColorRGBA;
 import jogo.gameobject.character.Player;
@@ -22,12 +23,16 @@ public class HudAppState extends BaseAppState {
 
     //Elementos da interface do jogador
     private BitmapText crosshair;
-
     private List<Picture> hotbarSlots = new ArrayList<>();
     private List<BitmapText> hotbarTexts = new ArrayList<>(); // Textos de quantidade
     private List<Picture> hotbarIcons = new ArrayList<>();
     private Picture selector;
     private List<Picture> hearts = new ArrayList<>();
+
+    // Texturas pré-carregadas para performance
+    private Texture2D texHeartFull;
+    private Texture2D texHeartHalf;
+    private Texture2D texHeartEmpty;
 
     // --- NOVO: Inventário ---
     private Node inventoryNode = new Node("InventoryNode");
@@ -50,6 +55,18 @@ public class HudAppState extends BaseAppState {
 
     @Override
     protected void initialize(Application app) {
+
+        // Carregar texturas dos corações UMA vez
+        texHeartFull = (Texture2D) assetManager.loadTexture("Interface/heart_full.png");
+        try {
+            texHeartHalf = (Texture2D) assetManager.loadTexture("Interface/heart_half.png");
+            texHeartEmpty = (Texture2D) assetManager.loadTexture("Interface/heart_empty.png");
+        } catch (Exception e) {
+            System.out.println("Aviso: Texturas heart_half ou heart_empty em falta. A usar heart_full.");
+            texHeartHalf = texHeartFull;
+            texHeartEmpty = texHeartFull;
+        }
+
         guiFont = assetManager.loadFont("Interface/Fonts/Default.fnt");
         crosshair = new BitmapText(guiFont, false);
         crosshair.setText("+");
@@ -105,14 +122,14 @@ public class HudAppState extends BaseAppState {
         // Adicionamos o selector DEPOIS dos slots para ele ficar "em cima" visualmente
         guiNode.attachChild(selector);
     }
+
+    //Cria as imagens dos corações na tela usando a textura carregada
     private void initHearts(Application app) {
-        // Criar 10 corações
         for (int i = 0; i < 10; i++) {
             Picture heart = new Picture("Heart_" + i);
-            heart.setImage(assetManager, "Interface/heart_full.png", true);
+            heart.setTexture(assetManager, texHeartFull, true); // Usa a textura carregada
             heart.setWidth(HEART_SIZE);
             heart.setHeight(HEART_SIZE);
-
             guiNode.attachChild(heart);
             hearts.add(heart);
         }
@@ -311,6 +328,27 @@ public class HudAppState extends BaseAppState {
         float x = (w - crosshair.getLineWidth()) / 2f;
         float y = (h + crosshair.getLineHeight()) / 2f;
         crosshair.setLocalTranslation(x, y, 0);
+    }
+
+    //Atualiza a imagem de cada coração (cheio/meio/vazio) consoante a vida atual
+    public void setHealth(int currentHealth) {
+
+        //Proteção: Se a lista de corações ainda não foi criada, sai.
+        if (hearts.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < 10; i++) {
+            Picture heart = hearts.get(i);
+            int heartValue = (i + 1) * 10;
+
+            if (currentHealth >= heartValue) {
+                heart.setTexture(assetManager, texHeartFull, true);
+            } else if (currentHealth >= heartValue - 5) {
+                heart.setTexture(assetManager, texHeartHalf, true);
+            } else {
+                heart.setTexture(assetManager, texHeartEmpty, true);
+            }
+        }
     }
 
     @Override
