@@ -15,6 +15,7 @@ import jogo.gameobject.item.ItemStack;
 import jogo.voxel.VoxelPalette;
 import java.util.ArrayList;
 import java.util.List;
+import com.jme3.math.Vector2f;
 
 public class HudAppState extends BaseAppState {
 
@@ -42,6 +43,8 @@ public class HudAppState extends BaseAppState {
     private boolean isInventoryVisible = false;
     private int currentSlotIndex = 0;
     private BitmapFont guiFont;
+
+    private Picture cursorItemIcon;
 
     // Tamanho dos elementos da interface
     private final float HOTBAR_WIDTH = 400f;
@@ -76,9 +79,16 @@ public class HudAppState extends BaseAppState {
         initHotbar(app);
         initHearts(app);
         initInventory(app);
+        // Inicializar o ícone do cursor (invisível por defeito)
+        cursorItemIcon = new Picture("CursorItem");
+        cursorItemIcon.setWidth(HOTBAR_WIDTH / 9f * 0.6f);
+        cursorItemIcon.setHeight(HOTBAR_WIDTH / 9f * 0.6f);
+        cursorItemIcon.setCullHint(Node.CullHint.Always); // Escondido
+        guiNode.attachChild(cursorItemIcon); // Anexar por último para ficar em cima de tudo
         refreshLayout();
         System.out.println("HudAppState initialized: UI elements attached");
     }
+
     private void initHotbar(Application app) {
         // Calcular a largura de UM quadrado baseado na largura total desejada / 9
         float slotWidth = HOTBAR_WIDTH / 9f;
@@ -215,7 +225,9 @@ public class HudAppState extends BaseAppState {
                 try {
                     icon.setImage(assetManager, "Textures/" + texName, true);
                     icon.setCullHint(Node.CullHint.Never); // Mostrar
-                } catch (Exception e) { icon.setCullHint(Node.CullHint.Always); }
+                } catch (Exception e) {
+                    icon.setCullHint(Node.CullHint.Always);
+                }
 
                 // Posicionar ícone no centro do slot
                 float x = bg.getLocalTranslation().x + (bg.getWidth() - icon.getWidth()) / 2f;
@@ -226,8 +238,8 @@ public class HudAppState extends BaseAppState {
                 if (stack.getAmount() > 1) {
                     text.setText(String.valueOf(stack.getAmount()));
                     // Posicionar no canto inferior direito do slot
-                    float tx = bg.getLocalTranslation().x + bg.getWidth() - text.getLineWidth() - 2f;
-                    float ty = bg.getLocalTranslation().y + text.getLineHeight();
+                    float tx = bg.getLocalTranslation().x + bg.getWidth() - text.getLineWidth() - 8f;
+                    float ty = bg.getLocalTranslation().y + text.getLineHeight() + 5f;
                     text.setLocalTranslation(tx, ty, 1); // Z=1 para ficar em cima
                 } else {
                     text.setText("");
@@ -315,7 +327,7 @@ public class HudAppState extends BaseAppState {
             slot.setPosition(x, y);
         }
         // --- IMPORTANTE: Atualizar os ícones e textos ---
-                PlayerAppState playerState = getState(PlayerAppState.class);
+        PlayerAppState playerState = getState(PlayerAppState.class);
         if (playerState != null && playerState.getPlayer() != null) {
             updateInventoryDisplay(playerState.getPlayer());
         }
@@ -356,7 +368,106 @@ public class HudAppState extends BaseAppState {
         // keep centered (cheap)
         centerCrosshair();
         refreshLayout();
+
+        // --- LÓGICA DE INVENTÁRIO UI ---
+        InputAppState input = getState(InputAppState.class);
+        PlayerAppState playerState = getState(PlayerAppState.class);
+
+        if (isInventoryVisible && input != null && playerState != null) {
+            Player player = playerState.getPlayer();
+
+            // 1. Atualizar posição do ícone do cursor (item arrastado)
+            Vector2f mousePos = getApplication().getInputManager().getCursorPosition();
+            updateCursorItemVisual(player, mousePos);
+
+            // 2. Verificar clique do rato
+            if (input.consumeUiClickRequested()) {
+                handleInventoryClick(mousePos, player);
+            }
+        }
     }
+
+    private void updateCursorItemVisual(Player player, Vector2f mousePos) {
+        ItemStack cursorStack = player.getCursorItem();
+        if (cursorStack != null && cursorStack.getAmount() > 0) {
+            // Atualizar textura se mudou (simplificado)
+            try {
+                cursorItemIcon.setImage(assetManager, "Textures/" + getTextureNameById(cursorStack.getId()), true);
+            } catch (Exception e) {
+            }
+
+            // Colocar na posição do rato (centrado)
+            cursorItemIcon.setPosition(mousePos.x - cursorItemIcon.getWidth() / 2, mousePos.y - cursorItemIcon.getHeight() / 2);
+            cursorItemIcon.setCullHint(Node.CullHint.Never); // Mostrar
+        } else {
+            cursorItemIcon.setCullHint(Node.CullHint.Always); // Esconder
+        }
+    }
+
+    private void handleInventoryClick(Vector2f mousePos, Player player) {
+        // Verificar clique na Hotbar
+        for (int i = 0; i < 9; i++) {
+            if (isMouseOver(hotbarSlots.get(i), mousePos)) {
+                clickSlot(player.getHotbar(), i, player);
+                return;
+            }
+        }
+
+        // Verificar clique no Inventário Principal
+        for (int i = 0; i < mainInvSlots.size(); i++) {
+            if (isMouseOver(mainInvSlots.get(i), mousePos)) {
+                clickSlot(player.getMainInventory(), i, player);
+                return;
+            }
+        }
+    }
+
+    private boolean isMouseOver(Picture pic, Vector2f mouse) {
+        float x = pic.getLocalTranslation().x;
+        float y = pic.getLocalTranslation().y;
+        float w = pic.getWidth();
+        float h = pic.getHeight();
+        return mouse.x >= x && mouse.x <= x + w && mouse.y >= y && mouse.y <= y + h;
+    }
+
+    private void clickSlot(ItemStack[] inventory, int index, Player player) {
+        ItemStack slotItem = inventory[index];
+        ItemStack handItem = player.getCursorItem();
+
+        // Lógica simples de troca/stack
+        if (handItem == null) {
+            // Mão vazia: pegar item do slot (se houver)
+            if (slotItem != null) {
+                player.setCursorItem(slotItem);
+                inventory[index] = null;
+            }
+        } else {
+            // Mão ocupada
+            if (slotItem == null) {
+                // Slot vazio: colocar item
+                inventory[index] = handItem;
+                player.setCursorItem(null);
+            } else {
+                // Slot ocupado
+                if (slotItem.getId() == handItem.getId()) {
+                    // Mesmo ID: Tentar juntar (stack)
+                    int space = ItemStack.MAX_STACK - slotItem.getAmount();
+                    if (space >= handItem.getAmount()) {
+                        slotItem.add(handItem.getAmount());
+                        player.setCursorItem(null);
+                    } else {
+                        slotItem.setAmount(ItemStack.MAX_STACK);
+                        handItem.add(-space); // Deixa o resto na mão
+                    }
+                } else {
+                    // IDs diferentes: Trocar
+                    inventory[index] = handItem;
+                    player.setCursorItem(slotItem);
+                }
+            }
+        }
+    }
+
 
     @Override
     protected void cleanup(Application app) {

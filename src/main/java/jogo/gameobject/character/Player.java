@@ -7,6 +7,7 @@ public class Player extends Character {
 
     private ItemStack[] hotbar = new ItemStack[9];
     private ItemStack[] mainInventory = new ItemStack[27];
+    private ItemStack cursorItem = null; // Item na mão do cursor (drag and drop)
 
     private int selectedSlot = 0; // 0 a 8
 
@@ -72,24 +73,30 @@ public class Player extends Character {
 
     // Retorna o ID do bloco na mão para sabermos o que colocar no mundo
     public byte getHeldItem() {
-        ItemStack stack = hotbar[selectedSlot];
-        if (stack != null && stack.getAmount() > 0) {
-            return stack.getId();
+        if (hotbar[selectedSlot] != null && hotbar[selectedSlot].getAmount() > 0) {
+            return hotbar[selectedSlot].getId();
         }
-        return 0; // 0 = Nada/Ar
+        return 0;
     }
 
     // Remove 1 item da mão (usado quando colocas um bloco)
     public void consumeHeldItem() {
-        ItemStack stack = hotbar[selectedSlot];
-        if (stack != null) {
-            stack.add(-1);
-            if (stack.getAmount() <= 0) {
-                hotbar[selectedSlot] = null; // Destrói o stack se chegar a 0
+        if (hotbar[selectedSlot] != null) {
+            hotbar[selectedSlot].add(-1); // Retira 1
+            if (hotbar[selectedSlot].getAmount() <= 0) {
+                hotbar[selectedSlot] = null; // Se chegar a 0, limpa o slot
             }
         }
     }
 
     public ItemStack[] getHotbar() { return hotbar; }
     public ItemStack[] getMainInventory() { return mainInventory; }
+
+    public ItemStack getCursorItem() {
+        return cursorItem;
+    }
+
+    public void setCursorItem(ItemStack cursorItem) {
+        this.cursorItem = cursorItem;
+    }
 }
