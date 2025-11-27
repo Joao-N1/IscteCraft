@@ -17,6 +17,10 @@ public abstract class VoxelBlockType {
     /** Whether this block is physically solid (collides/occludes). */
     public boolean isSolid() { return true; }
 
+    public boolean isPlaceable() {
+        return true;
+    }
+
     //define o tempo para partir os blocos
     public float getHardness() {
         return 0.1f; // Valor padrão (muito rápido)

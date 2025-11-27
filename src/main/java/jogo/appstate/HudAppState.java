@@ -16,6 +16,8 @@ import jogo.voxel.VoxelPalette;
 import java.util.ArrayList;
 import java.util.List;
 import com.jme3.math.Vector2f;
+import jogo.crafting.Recipe;
+import com.jme3.material.Material;
 
 public class HudAppState extends BaseAppState {
 
@@ -56,6 +58,12 @@ public class HudAppState extends BaseAppState {
         this.assetManager = assetManager;
     }
 
+    // --- NOVO: Crafting ---
+    private Node craftingNode = new Node("CraftingNode");
+    private List<Recipe> recipes = new ArrayList<>();
+    private List<Picture> recipeIcons = new ArrayList<>();
+    private List<BitmapText> recipeLabels = new ArrayList<>(); // Para mostrar o custo
+
     @Override
     protected void initialize(Application app) {
 
@@ -79,14 +87,51 @@ public class HudAppState extends BaseAppState {
         initHotbar(app);
         initHearts(app);
         initInventory(app);
+        initCrafting(app);
         // Inicializar o ícone do cursor (invisível por defeito)
-        cursorItemIcon = new Picture("CursorItem");
+        cursorItemIcon = new Picture("Interface/CursorItem.png");
         cursorItemIcon.setWidth(HOTBAR_WIDTH / 9f * 0.6f);
         cursorItemIcon.setHeight(HOTBAR_WIDTH / 9f * 0.6f);
         cursorItemIcon.setCullHint(Node.CullHint.Always); // Escondido
         guiNode.attachChild(cursorItemIcon); // Anexar por último para ficar em cima de tudo
         refreshLayout();
         System.out.println("HudAppState initialized: UI elements attached");
+    }
+
+    private void initCrafting(Application app) {
+        // 1. Definir Receitas
+        // Receita 1: 1 Madeira (Wood) -> 4 Tábuas (Planks)
+        recipes.add(new Recipe("Planks", VoxelPalette.Wood_ID, 1, VoxelPalette.PLANKS_ID, 4));
+
+        // Receita 2: 2 Tábuas (Planks) -> 4 Paus (Sticks)
+        recipes.add(new Recipe("Sticks", VoxelPalette.PLANKS_ID, 2, VoxelPalette.STICK_ID, 4));
+
+        // 2. Criar UI visual para cada receita
+        float iconSize = 40f;
+
+        for (int i = 0; i < recipes.size(); i++) {
+            Recipe r = recipes.get(i);
+
+            // Ícone do Produto Final
+            Picture icon = new Picture("Recipe_" + i);
+            // Nota: certifica-te que o getTextureNameById lida com os novos IDs!
+            try {
+                icon.setImage(assetManager, "Textures/" + getTextureNameById(r.outputId), true);
+            } catch (Exception e) { }
+
+            icon.setWidth(iconSize);
+            icon.setHeight(iconSize);
+            craftingNode.attachChild(icon);
+            recipeIcons.add(icon);
+
+            // Texto Simples de Custo (ex: "1 Wood")
+            BitmapText costText = new BitmapText(guiFont, false);
+            costText.setSize(guiFont.getCharSet().getRenderedSize() * 0.7f);
+            costText.setText(r.inputCount + "x Mat"); // Simplificado
+            costText.setColor(ColorRGBA.Yellow);
+            craftingNode.attachChild(costText);
+            recipeLabels.add(costText);
+        }
     }
 
     private void initHotbar(Application app) {
@@ -97,7 +142,7 @@ public class HudAppState extends BaseAppState {
         for (int i = 0; i < 9; i++) {
             Picture slot = new Picture("HotbarSlot_" + i);
             // AQUI: Certifica-te que tens a imagem 'hotbarsquare.png' na pasta Interface
-            slot.setImage(assetManager, "Interface/hotbarsquare.png", true);
+            slot.setImage(assetManager, "Interface/hotbarsquare2.png", true);
 
             slot.setWidth(slotWidth);
             slot.setHeight(HOTBAR_HEIGHT);
@@ -153,7 +198,7 @@ public class HudAppState extends BaseAppState {
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 Picture slot = new Picture("InvSlot_" + row + "_" + col);
-                slot.setImage(assetManager, "Interface/hotbarsquare.png", true);
+                slot.setImage(assetManager, "Interface/hotbarsquare2.png", true);
                 slot.setWidth(slotSize);
                 slot.setHeight(slotSize); // Quadrado
 
@@ -184,10 +229,12 @@ public class HudAppState extends BaseAppState {
         this.isInventoryVisible = visible;
         if (visible) {
             guiNode.attachChild(inventoryNode);
+            guiNode.attachChild(craftingNode);
             // Esconder a mira quando inventário está aberto
             crosshair.removeFromParent();
         } else {
             inventoryNode.removeFromParent();
+            craftingNode.removeFromParent();
             // Mostrar a mira de volta
             guiNode.attachChild(crosshair);
         }
@@ -263,6 +310,8 @@ public class HudAppState extends BaseAppState {
         if (id == VoxelPalette.COAL_ID) return "CoalBlock.png";
         if (id == VoxelPalette.IRON_ID) return "IronBlock.png";
         if (id == VoxelPalette.DIAMOND_ID) return "DiamondBlock.png";
+        if (id == VoxelPalette.PLANKS_ID) return "PlanksBlock.png";
+        if (id == VoxelPalette.STICK_ID) return "Stick.png";
         return "DirtBlock.png"; // Fallback
     }
     // ------------------------------------------
@@ -334,6 +383,38 @@ public class HudAppState extends BaseAppState {
         if (playerState != null && playerState.getPlayer() != null) {
             updateInventoryDisplay(playerState.getPlayer());
         }
+
+        // --- Layout do Crafting (Livro à esquerda) ---
+        // Vamos posicionar à esquerda do inventário principal
+        float craftingX = startX - 80f; // 80px à esquerda do início do inventário
+        float craftingY = invStartY + 100f; // Começa no topo
+
+        for (int i = 0; i < recipeIcons.size(); i++) {
+            Picture icon = recipeIcons.get(i);
+            BitmapText label = recipeLabels.get(i);
+
+            // Colocar um por baixo do outro
+            float y = craftingY - (i * 60f);
+
+            icon.setPosition(craftingX, y);
+
+            // Texto ao lado ou em cima
+            label.setLocalTranslation(craftingX + 50f, y + 30f, 1);
+
+            // Dica Visual: Podes mudar a cor do ícone se não tiver materiais
+            PlayerAppState pState = getState(PlayerAppState.class);
+            if (pState != null && pState.getPlayer() != null) {
+                Recipe r = recipes.get(i);
+                Material mat = icon.getMaterial();
+                if (mat != null) {
+                    if (pState.getPlayer().hasItem(r.inputId, r.inputCount)) {
+                        mat.setColor("Color", ColorRGBA.White); // Disponível
+                    } else {
+                        mat.setColor("Color", ColorRGBA.Gray); // Indisponível
+                    }
+                }
+            }
+        }
     }
 
     private void centerCrosshair() {
@@ -386,6 +467,32 @@ public class HudAppState extends BaseAppState {
             // 2. Verificar clique do rato
             if (input.consumeUiClickRequested()) {
                 handleInventoryClick(mousePos, player);
+                handleCraftingClick(mousePos, playerState.getPlayer());
+            }
+        }
+
+    }
+
+    private void handleCraftingClick(Vector2f mousePos, Player player) {
+        for (int i = 0; i < recipeIcons.size(); i++) {
+            Picture icon = recipeIcons.get(i);
+            if (isMouseOver(icon, mousePos)) {
+                Recipe r = recipes.get(i);
+
+                // Lógica de Crafting
+                if (player.hasItem(r.inputId, r.inputCount)) {
+                    // Tenta adicionar o produto
+                    if (player.addItem(r.outputId, r.outputCount)) {
+                        // Se tiver espaço e adicionou, remove os materiais
+                        player.removeItem(r.inputId, r.inputCount);
+                        System.out.println("Crafted: " + r.name);
+                    } else {
+                        System.out.println("Sem espaço para o produto!");
+                    }
+                } else {
+                    System.out.println("Faltam materiais!");
+                }
+                return;
             }
         }
     }

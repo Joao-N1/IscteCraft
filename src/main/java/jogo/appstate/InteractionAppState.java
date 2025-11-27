@@ -77,6 +77,19 @@ public class InteractionAppState extends BaseAppState {
             if (heldId == 0) return; // Mão vazia
 
             VoxelWorld placeVw = world != null ? world.getVoxelWorld() : null;
+            // --- NOVA VERIFICAÇÃO ---
+            VoxelWorld vw = world.getVoxelWorld();
+            var type = placeVw != null ? placeVw.getPalette().get(heldId) : null;
+            if (type == null) {
+                System.out.println("Tipo de bloco desconhecido: " + heldId);
+                return;
+            }
+
+            if (!type.isPlaceable()) {
+                System.out.println("Não podes colocar este item!");
+                return; // Sai da função, não coloca nada
+            }
+            // ------------------------
             if (placeVw != null) {
                 // Raycast para encontrar onde colocar
                 placeVw.pickFirstSolid(cam, reach).ifPresent(hit -> {

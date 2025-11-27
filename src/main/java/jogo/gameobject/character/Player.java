@@ -99,4 +99,54 @@ public class Player extends Character {
     public void setCursorItem(ItemStack cursorItem) {
         this.cursorItem = cursorItem;
     }
+
+
+    // Verifica se tem quantidade suficiente de um item (procura em todo o inventário)
+    public boolean hasItem(byte id, int amount) {
+        int count = 0;
+        // Verificar Hotbar
+        for (ItemStack stack : hotbar) {
+            if (stack != null && stack.getId() == id) {
+                count += stack.getAmount();
+            }
+        }
+        // Verificar Inventário Principal
+        for (ItemStack stack : mainInventory) {
+            if (stack != null && stack.getId() == id) {
+                count += stack.getAmount();
+            }
+        }
+        return count >= amount;
+    }
+
+    // Remove uma quantidade de itens (começa pelos slots mais cheios ou primeiros encontrados)
+    public void removeItem(byte id, int amount) {
+        int remaining = amount;
+
+        // Remover da Hotbar
+        remaining = removeFromInventory(hotbar, id, remaining);
+        if (remaining > 0) {
+            // Remover do Inventário Principal
+            removeFromInventory(mainInventory, id, remaining);
+        }
+    }
+
+    private int removeFromInventory(ItemStack[] inventory, byte id, int amountToRemove) {
+        for (int i = 0; i < inventory.length; i++) {
+            if (amountToRemove <= 0) break;
+
+            ItemStack stack = inventory[i];
+            if (stack != null && stack.getId() == id) {
+                if (stack.getAmount() > amountToRemove) {
+                    stack.add(-amountToRemove);
+                    amountToRemove = 0;
+                } else {
+                    amountToRemove -= stack.getAmount();
+                    inventory[i] = null; // Remove o stack inteiro
+                }
+            }
+        }
+        return amountToRemove;
+    }
+
 }
