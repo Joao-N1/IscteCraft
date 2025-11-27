@@ -152,8 +152,26 @@ public class VoxelWorld {
                         setBlock(x, y, z, VoxelPalette.GRASS_ID);
                     else if (y > height - 3)
                         setBlock(x, y, z, VoxelPalette.DIRT_ID);
-                    else
-                        setBlock(x, y, z, VoxelPalette.STONE_ID);
+                    else {
+                        // Probabilidades
+                        int roll = new Random().nextInt(1000);
+
+                        if (roll < 5) { // 0.5% de chance de ser Diamante (Raro)
+                            // Diamante só aparece fundo (ex: y < 15)
+                            if (y < 15) setBlock(x, y, z, VoxelPalette.DIAMOND_ID);
+                            else setBlock(x, y, z, VoxelPalette.IRON_ID); // Se for alto, vira ferro
+
+                        } else if (roll < 30) { // ~3% de chance de ser Ferro
+                            setBlock(x, y, z, VoxelPalette.IRON_ID);
+
+                        } else if (roll < 60) { // ~6% de chance de ser Carvão
+                            setBlock(x, y, z, VoxelPalette.COAL_ID);
+
+                        } else {
+                            // Se não for nada disto, é pedra normal
+                            setBlock(x, y, z, VoxelPalette.STONE_ID);
+                        }
+                    }
                 }
 
                 // camada base inquebrável

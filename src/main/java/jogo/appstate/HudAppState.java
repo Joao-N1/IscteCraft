@@ -248,6 +248,9 @@ public class HudAppState extends BaseAppState {
         if (id == VoxelPalette.Wood_ID) return "WoodBlock.png";
         if (id == VoxelPalette.Leaf_ID) return "LeafBlock.png";
         if (id == VoxelPalette.SpikyWood_ID) return "SpikyWoodBlock.png";
+        if (id == VoxelPalette.COAL_ID) return "CoalBlock.png";
+        if (id == VoxelPalette.IRON_ID) return "IronBlock.png";
+        if (id == VoxelPalette.DIAMOND_ID) return "DiamondBlock.png";
         return "DirtBlock.png"; // Fallback
     }
     // ------------------------------------------

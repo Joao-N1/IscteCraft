@@ -33,6 +33,9 @@ public class VoxelPalette {
         p.register(new WoodBlockType()); // id 5
         p.register(new SpikyWoodBlockType()); // id 6
         p.register(new LeafBlockType()); // id 7
+        p.register(new CoalBlockType()); // id 8
+        p.register(new IronBlockType()); // id 9
+        p.register(new DiamondBlockType()); // id 10
         return p;
     }
 
@@ -44,4 +47,7 @@ public class VoxelPalette {
     public static final byte Wood_ID = 5;
     public static final byte SpikyWood_ID = 6;
     public static final byte Leaf_ID = 7;
+    public static final byte COAL_ID = 8;
+    public static final byte IRON_ID = 9;
+    public static final byte DIAMOND_ID = 10;
 }

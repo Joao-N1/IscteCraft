@@ -14,6 +14,8 @@ import com.jme3.scene.Node;
 import jogo.gameobject.character.Player;
 import jogo.voxel.VoxelPalette;
 import jogo.voxel.VoxelWorld;
+import com.jme3.audio.AudioNode;
+import com.jme3.audio.AudioData;
 
 public class PlayerAppState extends BaseAppState {
 
@@ -32,7 +34,7 @@ public class PlayerAppState extends BaseAppState {
     private float yaw = 0f;
     private float pitch = 0f;
 
-    private HudAppState hudAppState;
+    private final float RESPAWN_PROTECTION_TIME = 3.0f;
     private float damageCooldown = 0f;
     private final float INVULNERABILITY_TIME = 1.0f;
 
@@ -47,6 +49,9 @@ public class PlayerAppState extends BaseAppState {
 
     private HudAppState hud;
     private boolean inventoryOpen = false;
+
+    //Audios/Sound Effects
+    private AudioNode audioHurt;
 
     public Player getPlayer() {
         return player;
@@ -89,6 +94,14 @@ public class PlayerAppState extends BaseAppState {
         playerLight.setRadius(12f);
         rootNode.addLight(playerLight);
 
+
+        // --- Configuração do Som de Dano ---
+        audioHurt = new AudioNode(assetManager, "Sounds/Hurt_Sound_Effect.wav", AudioData.DataType.Buffer);
+        audioHurt.setPositional(false); // false = som ambiente/2D (ouve-se sempre no volume máximo)
+        audioHurt.setLooping(false);    // Não repetir
+        audioHurt.setVolume(3.0f);      // Ajusta o volume se necessário (2.0 é bem alto)
+        playerNode.attachChild(audioHurt);
+
         // Spawn at recommended location
         respawn();
 
@@ -98,13 +111,9 @@ public class PlayerAppState extends BaseAppState {
         this.pitch = -0.35f;
         applyViewToCamera();
 
-        //----------------------------------------------------------------
 
         // Obter referência para o HUD para atualizar a vida
         hud = getState(HudAppState.class);
-
-        // Obter referência para o HUD para atualizar a vida
-        hudAppState = getState(HudAppState.class);
 
         // Assegurar que o player começa com vida cheia
         if(player != null) player.setHealth(100);
@@ -196,6 +205,7 @@ public class PlayerAppState extends BaseAppState {
             damageCooldown -= tpf;
             return;
         }
+
         if (world == null || player == null) return;
         VoxelWorld voxelWorld = world.getVoxelWorld();
         if (voxelWorld == null) return;
@@ -214,19 +224,29 @@ public class PlayerAppState extends BaseAppState {
         // Verifica nos pés (y) e no tronco (y+1)
         int feetY = (int) Math.floor(pos.y);
         int headY = (int) Math.floor(pos.y + 1f);
+        int belowY = feetY - 1;                    // Bloco debaixo dos pés
+        int aboveY = headY + 1;                    // Bloco acima da cabeça
 
-        boolean tookDamage = false;
 
-        // Loop pelos blocos vizinhos
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
-                // Verificar bloco nos pés e na cabeça
-                tookDamage |= checkBlockDamage(voxelWorld, x, feetY, z);
-                tookDamage |= checkBlockDamage(voxelWorld, x, headY, z);
 
-                if (tookDamage) break; // Se já levou dano, não precisa verificar mais
+                // Verifica Pés
+                if (checkBlockDamage(voxelWorld, x, feetY, z)) {
+                    return; // <--- PARAR IMEDIATAMENTE se levou dano
+                }
+                // Verifica Cabeça
+                if (checkBlockDamage(voxelWorld, x, headY, z)) {
+                    return; // <--- PARAR IMEDIATAMENTE se levou dano
+                }
+                // 2. Verifica chão (Pisar em cima)
+                if (checkBlockDamage(voxelWorld, x, belowY, z))
+                    return;
+
+                // 3. Verifica teto (Bater com a cabeça)
+                if (checkBlockDamage(voxelWorld, x, aboveY, z))
+                    return;
             }
-            if (tookDamage) break;
         }
     }
 
@@ -248,6 +268,11 @@ public class PlayerAppState extends BaseAppState {
     //Retira vida, ativa invencibilidade temporária e verifica se morreu
     public void takeDamage(int amount) {
         if (damageCooldown > 0) return; // Segurança extra
+
+        //Tocar o som
+        if (audioHurt != null) {
+            audioHurt.playInstance();
+        }
 
         int currentHealth = player.getHealth();
         currentHealth -= amount;
@@ -286,6 +311,10 @@ public class PlayerAppState extends BaseAppState {
         if (player != null) {
             player.setHealth(100);
         }
+
+        //invencibilidade ao dar respawn
+        damageCooldown = RESPAWN_PROTECTION_TIME;
+
         updateHud(); // Atualiza HUD para cheio
         damageCooldown = 0f; // Remove cooldown se houver
 
