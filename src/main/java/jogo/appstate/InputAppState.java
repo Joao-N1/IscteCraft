@@ -26,6 +26,8 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
     private boolean breaking = false;
     private volatile boolean inventoryRequested;
     private int hotbarRequest = -1;
+    private volatile boolean useRequested;
+    private volatile boolean uiClickRequested;
 
     @Override
     protected void initialize(Application app) {
@@ -64,6 +66,9 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
             im.addMapping("HotbarSlot_" + i, new KeyTrigger(KeyInput.KEY_1 + i));
             im.addListener(this, "HotbarSlot_" + i);
         }
+
+        im.addMapping("Use", new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
+        im.addListener(this, "Use");
     }
 
     @Override
@@ -121,8 +126,11 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
                     breaking = isPressed;
                     if (isPressed) breakRequested = true;
                 } else {
-                    breaking = false;
+                    if (isPressed) uiClickRequested = true;
                 }
+            }
+            case "Use" -> {
+                if (isPressed && mouseCaptured) useRequested = true;
             }
             case "ToggleShading" -> {
                 if (isPressed) toggleShadingRequested = true;
@@ -137,6 +145,19 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
                 if (isPressed) inventoryRequested = true;
             }
         }
+    }
+
+    // --- NOVOS MÉTODOS PARA CONSUMIR INPUT ---
+    public boolean consumeUseRequested() {
+        boolean r = useRequested;
+        useRequested = false;
+        return r;
+    }
+
+    public boolean consumeUiClickRequested() {
+        boolean r = uiClickRequested;
+        uiClickRequested = false;
+        return r;
     }
 
     @Override

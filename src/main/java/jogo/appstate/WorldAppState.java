@@ -77,6 +77,11 @@ public class WorldAppState extends BaseAppState {
         return voxelWorld;
     }
 
+
+    public PhysicsSpace getPhysicsSpace() {
+        return physicsSpace;
+    }
+
     @Override
     public void update(float tpf) {
         if (input == null || !input.isMouseCaptured()) {
