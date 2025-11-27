@@ -18,7 +18,7 @@ public class DiamondBlockType extends VoxelBlockType {
     @Override
     public Material getMaterial(AssetManager assetManager) {
         if (cachedMaterial == null) {
-            Texture2D tex = (Texture2D) assetManager.loadTexture("Textures/DiamondBlock.jpg");
+            Texture2D tex = (Texture2D) assetManager.loadTexture("Textures/DiamondBlock.png");
             cachedMaterial = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
             cachedMaterial.setTexture("DiffuseMap", tex);
             cachedMaterial.setBoolean("UseMaterialColors", true);
