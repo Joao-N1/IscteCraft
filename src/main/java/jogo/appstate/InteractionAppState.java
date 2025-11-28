@@ -74,6 +74,7 @@ public class InteractionAppState extends BaseAppState {
             if (playerState == null) return;
 
             byte heldId = playerState.getPlayer().getHeldItem();
+            System.out.println("DEBUG: Tentativa de colocar. Item na mão ID: " + heldId);
             if (heldId == 0) return; // Mão vazia
 
             VoxelWorld placeVw = world != null ? world.getVoxelWorld() : null;
@@ -101,22 +102,40 @@ public class InteractionAppState extends BaseAppState {
                     int z = hit.cell.z + (int) hit.normal.z;
 
                     // Verifica se não estamos a colocar o bloco dentro do próprio jogador!
-                    Vec3 playerVec = playerState.getPlayer().getPosition();
-                    Vector3f playerPos = new Vector3f((float) playerVec.x, (float) playerVec.y, (float) playerVec.z);
-                    // Distância simples (podes melhorar isto com BoundingBox depois)
-                    if (new Vector3f(x + 0.5f, y + 0.5f, z + 0.5f).distance(playerPos) > 1.2f) {
 
-                        placeVw.setBlock(x, y, z, heldId);
-                        placeVw.rebuildDirtyChunks(world.getPhysicsSpace());
+                    // Se não tiveres o método toVector3f, usa:
+                    jogo.framework.math.Vec3 pPos = playerState.getPlayer().getPosition();
+                    Vector3f playerPos = new Vector3f(pPos.x, pPos.y, pPos.z);
 
-                        // Gastar 1 item
-                        playerState.getPlayer().consumeHeldItem();
+                    Vector3f playerCenter = playerPos.add(0, 0.9f, 0);
 
-                        // Atualizar física (se necessário) e UI
-                        playerState.refreshPhysics();
+                    // Definir a caixa do jogador (Raio ~0.4, Altura ~1.8 -> Meia-altura ~0.9)
+                    // Assumindo que a posição é o centro do corpo (cintura)
+                    com.jme3.bounding.BoundingBox playerBox = new com.jme3.bounding.BoundingBox(
+                            playerPos,          // Centro
+                            0.48f, 0.9f, 0.48f);  // Raio X, Meia-Altura Y, Raio Z
 
-                        System.out.println("Bloco colocado: " + heldId);
+                    /// 4. Criar a caixa do BLOCO NOVO
+                    Vector3f blockCenter = new Vector3f(x + 0.5f, y + 0.5f, z + 0.5f);
+                    // Usamos 0.49f em vez de 0.5f para evitar que toque nos blocos vizinhos
+                    com.jme3.bounding.BoundingBox blockBox = new com.jme3.bounding.BoundingBox(
+                            blockCenter,
+                            0.49f, 0.49f, 0.49f);
+
+                    System.out.println("DEBUG: Player Box: " + playerBox);
+                    System.out.println("DEBUG: Block Box: " + blockBox);
+
+                    // Se as caixas se tocarem, NÃO colocar bloco
+                    if (playerBox.intersects(blockBox)) {
+                        System.out.println("Não podes colocar blocos dentro do jogador!");
+                        return;
                     }
+                    System.out.println("SUCESSO: A colocar bloco em " + x + "," + y + "," + z);
+
+                    vw.setBlock(x, y, z, heldId);
+                    vw.rebuildDirtyChunks(world.getPhysicsSpace());
+                    playerState.getPlayer().consumeHeldItem();
+                    playerState.refreshPhysics();
                 });
             }
         }
