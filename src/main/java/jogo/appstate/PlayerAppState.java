@@ -84,7 +84,7 @@ public class PlayerAppState extends BaseAppState {
         // BetterCharacterControl(radius, height, mass)
         characterControl = new BetterCharacterControl(0.42f, 1.8f, 80f);
         characterControl.setGravity(new Vector3f(0, -24f, 0));
-        characterControl.setJumpForce(new Vector3f(0, 400f, 0));
+        characterControl.setJumpForce(new Vector3f(0, 500f, 0));
         playerNode.addControl(characterControl);
         physicsSpace.add(characterControl);
 
@@ -127,7 +127,13 @@ public class PlayerAppState extends BaseAppState {
             // refresh spawn from world in case terrain changed
             if (world != null) spawnPosition = world.getRecommendedSpawnPosition();
             respawn();
+
         }
+        if (playerNode != null && player != null) {
+            Vector3f physPos = playerNode.getWorldTranslation();
+            player.setPosition(physPos.x, physPos.y, physPos.z);
+        }
+
         // 1. Verificar se o jogador quer abrir/fechar inventário ('I')
         if (input.consumeInventoryRequest()) {
             inventoryOpen = !inventoryOpen;
