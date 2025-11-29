@@ -152,33 +152,19 @@ public class VoxelWorld {
                         setBlock(x, y, z, VoxelPalette.GRASS_ID);
                     else if (y > height - 3)
                         setBlock(x, y, z, VoxelPalette.DIRT_ID);
-                    else {
-                        // Probabilidades
-                        int roll = new Random().nextInt(1000);
-
-                        if (roll < 5) { // 0.5% de chance de ser Diamante (Raro)
-                            // Diamante só aparece fundo (ex: y < 15)
-                            if (y < 15) setBlock(x, y, z, VoxelPalette.DIAMOND_ID);
-                            else setBlock(x, y, z, VoxelPalette.IRON_ID); // Se for alto, vira ferro
-
-                        } else if (roll < 30) { // ~3% de chance de ser Ferro
-                            setBlock(x, y, z, VoxelPalette.IRON_ID);
-
-                        } else if (roll < 60) { // ~6% de chance de ser Carvão
-                            setBlock(x, y, z, VoxelPalette.COAL_ID);
-
-                        } else {
-                            // Se não for nada disto, é pedra normal
-                            setBlock(x, y, z, VoxelPalette.STONE_ID);
-                        }
-                    }
+                    else
+                        setBlock(x, y, z, VoxelPalette.STONE_ID);
                 }
-
                 // camada base inquebrável
                 setBlock(x, 0, z, VoxelPalette.THEROCK_ID);
-
             }
         }
+
+        // ===========================================
+        // 2. GERAÇÃO DOS MINÉRIOS
+        // ===========================================
+        generateOreVeins(seed);
+
         // ===========================================
         //  GERAÇÃO DE ÁRVORES SIMPLES
         // ===========================================
@@ -527,6 +513,82 @@ public class VoxelWorld {
             this.x = (int) vec3f.x;
             this.y = (int) vec3f.y;
             this.z = (int) vec3f.z;
+        }
+    }
+
+    /**
+     * Gera um aglomerado (vein) de minério a partir de um ponto central.
+     * @param x, y, z - Coordenadas do centro do filão
+     * @param oreId - O ID do minério (ex: COAL_ID)
+     * @param veinSize - Quantos blocos, em média, o filão vai ter
+     */
+    private void spawnVein(int x, int y, int z, byte oreId, int veinSize) {
+        Random rand = new Random(); // Podes passar a seed global se quiseres consistência total
+
+        // Vamos tentar colocar 'veinSize' blocos
+        for (int i = 0; i < veinSize; i++) {
+            // Desvio aleatório do centro (cria formas irregulares, não cubos perfeitos)
+            // ex: x + random entre -1 e 1
+            int tx = x + rand.nextInt(3) - 1;
+            int ty = y + rand.nextInt(3) - 1;
+            int tz = z + rand.nextInt(3) - 1;
+
+            // Verificações de segurança:
+            // 1. Está dentro do mundo?
+            // 2. O bloco alvo é PEDRA?
+            if (inBounds(tx, ty, tz) && getBlock(tx, ty, tz) == VoxelPalette.STONE_ID) {
+                setBlock(tx, ty, tz, oreId);
+
+                //Mover o "centro" ligeiramente para o filão crescer como uma cobra/mancha
+                x = tx;
+                y = ty;
+                z = tz;
+            }
+        }
+    }
+
+    private void generateOreVeins(long seed) {
+        Random random = new Random(seed);
+
+        // Quantidade de tentativas de filões por Chunk (aprox).
+        // Como o teu mundo é 256x256, é grande. Vamos iterar aleatoriamente.
+
+        // --- CONFIGURAÇÃO ---
+        // Define a densidade de minérios no mapa.
+        // Nota: Representa o número de "tentativas". O valor real de filões criados será menor,
+        // pois tentativas que caiam em Ar (cavernas) ou Terra são ignoradas.
+        int coalAttempts = 1600;    // Carvão: Comum
+        int ironAttempts = 1000;    // Ferro: Médio
+        int diamondAttempts = 400;  // Diamante: Raro
+
+        // --- GERAR CARVÃO ---
+        for (int i = 0; i < coalAttempts; i++) {
+            int x = random.nextInt(sizeX);
+            int z = random.nextInt(sizeZ);
+            int y = random.nextInt(sizeY); // Qualquer altura
+
+            // Filão grande (6 a 10 blocos)
+            spawnVein(x, y, z, VoxelPalette.COAL_ID, 6 + random.nextInt(5));
+        }
+
+        // --- GERAR FERRO ---
+        for (int i = 0; i < ironAttempts; i++) {
+            int x = random.nextInt(sizeX);
+            int z = random.nextInt(sizeZ);
+            int y = random.nextInt(40); // Só abaixo de Y=40
+
+            // Filão médio (3 a 6 blocos)
+            spawnVein(x, y, z, VoxelPalette.IRON_ID, 3 + random.nextInt(4));
+        }
+
+        // --- GERAR DIAMANTE ---
+        for (int i = 0; i < diamondAttempts; i++) {
+            int x = random.nextInt(sizeX);
+            int z = random.nextInt(sizeZ);
+            int y = random.nextInt(16); // Só bem fundo (abaixo de Y=16)
+
+            // Filão pequeno (2 a 4 blocos)
+            spawnVein(x, y, z, VoxelPalette.DIAMOND_ID, 2 + random.nextInt(3));
         }
     }
 }
