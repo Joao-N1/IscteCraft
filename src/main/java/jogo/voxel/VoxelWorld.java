@@ -557,9 +557,9 @@ public class VoxelWorld {
         // Define a densidade de minérios no mapa.
         // Nota: Representa o número de "tentativas". O valor real de filões criados será menor,
         // pois tentativas que caiam em Ar (cavernas) ou Terra são ignoradas.
-        int coalAttempts = 1600;    // Carvão: Comum
-        int ironAttempts = 1000;    // Ferro: Médio
-        int diamondAttempts = 400;  // Diamante: Raro
+        int coalAttempts = 2400;    // Carvão: Comum
+        int ironAttempts = 1600;    // Ferro: Médio
+        int diamondAttempts = 800;  // Diamante: Raro
 
         // --- GERAR CARVÃO ---
         for (int i = 0; i < coalAttempts; i++) {
@@ -567,7 +567,8 @@ public class VoxelWorld {
             int z = random.nextInt(sizeZ);
             int y = random.nextInt(sizeY); // Qualquer altura
 
-            // Filão grande (6 a 10 blocos)
+            // O último parâmetro define o tamanho do filão (Minimo + Variação).
+            // Ex: "12 + random.nextInt(10)" cria filões com 12 a 21 blocos.
             spawnVein(x, y, z, VoxelPalette.COAL_ID, 6 + random.nextInt(5));
         }
 

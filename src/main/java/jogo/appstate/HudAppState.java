@@ -10,6 +10,7 @@ import com.jme3.scene.Node;
 import com.jme3.texture.Texture2D;
 import com.jme3.ui.Picture;
 import com.jme3.math.ColorRGBA;
+import jogo.crafting.CraftingManager;
 import jogo.gameobject.character.Player;
 import jogo.gameobject.item.ItemStack;
 import jogo.voxel.VoxelPalette;
@@ -60,6 +61,7 @@ public class HudAppState extends BaseAppState {
 
     // --- NOVO: Crafting ---
     private Node craftingNode = new Node("CraftingNode");
+    private CraftingManager craftingManager;
     private List<Recipe> recipes = new ArrayList<>();
     private List<Picture> recipeIcons = new ArrayList<>();
     private List<BitmapText> recipeLabels = new ArrayList<>(); // Para mostrar o custo
@@ -77,6 +79,8 @@ public class HudAppState extends BaseAppState {
             texHeartHalf = texHeartFull;
             texHeartEmpty = texHeartFull;
         }
+
+        craftingManager = new CraftingManager();
 
         guiFont = assetManager.loadFont("Interface/Fonts/Default.fnt");
         crosshair = new BitmapText(guiFont, false);
@@ -96,15 +100,19 @@ public class HudAppState extends BaseAppState {
         guiNode.attachChild(cursorItemIcon); // Anexar por último para ficar em cima de tudo
         refreshLayout();
         System.out.println("HudAppState initialized: UI elements attached");
+
+        initCrafting(app);
     }
 
     private void initCrafting(Application app) {
-        // 1. Definir Receitas
-        // Receita 1: 1 Madeira (Wood) -> 4 Tábuas (Planks)
-        recipes.add(new Recipe("Planks", VoxelPalette.Wood_ID, 1, VoxelPalette.PLANKS_ID, 4));
+        // Limpar listas antigas para garantir que começamos do zero (segurança extra)
+        recipeIcons.forEach(Picture::removeFromParent);
+        recipeIcons.clear();
+        recipeLabels.forEach(BitmapText::removeFromParent);
+        recipeLabels.clear();
 
-        // Receita 2: 2 Tábuas (Planks) -> 4 Paus (Sticks)
-        recipes.add(new Recipe("Sticks", VoxelPalette.PLANKS_ID, 2, VoxelPalette.STICK_ID, 4));
+        // 1. Definir Receitas
+        List<Recipe> recipes = craftingManager.getRecipes();
 
         // 2. Criar UI visual para cada receita
         float iconSize = 40f;
@@ -114,7 +122,6 @@ public class HudAppState extends BaseAppState {
 
             // Ícone do Produto Final
             Picture icon = new Picture("Recipe_" + i);
-            // Nota: certifica-te que o getTextureNameById lida com os novos IDs!
             try {
                 icon.setImage(assetManager, "Textures/" + getTextureNameById(r.outputId), true);
             } catch (Exception e) { }
@@ -124,10 +131,10 @@ public class HudAppState extends BaseAppState {
             craftingNode.attachChild(icon);
             recipeIcons.add(icon);
 
-            // Texto Simples de Custo (ex: "1 Wood")
+            // Texto de Custo
             BitmapText costText = new BitmapText(guiFont, false);
             costText.setSize(guiFont.getCharSet().getRenderedSize() * 0.7f);
-            costText.setText(r.inputCount + "x Mat"); // Simplificado
+            costText.setText(r.inputCount + "x Mat");
             costText.setColor(ColorRGBA.Yellow);
             craftingNode.attachChild(costText);
             recipeLabels.add(costText);
@@ -404,8 +411,11 @@ public class HudAppState extends BaseAppState {
             // Dica Visual: Podes mudar a cor do ícone se não tiver materiais
             PlayerAppState pState = getState(PlayerAppState.class);
             if (pState != null && pState.getPlayer() != null) {
-                Recipe r = recipes.get(i);
+
+                Recipe r = craftingManager.getRecipes().get(i);
+
                 Material mat = icon.getMaterial();
+
                 if (mat != null) {
                     if (pState.getPlayer().hasItem(r.inputId, r.inputCount)) {
                         mat.setColor("Color", ColorRGBA.White); // Disponível
@@ -474,23 +484,20 @@ public class HudAppState extends BaseAppState {
     }
 
     private void handleCraftingClick(Vector2f mousePos, Player player) {
+        List<Recipe> recipes = craftingManager.getRecipes(); // Obter lista atualizada
+
         for (int i = 0; i < recipeIcons.size(); i++) {
             Picture icon = recipeIcons.get(i);
+
             if (isMouseOver(icon, mousePos)) {
+                // Se clicou, pedimos ao manager para tentar fazer o craft
                 Recipe r = recipes.get(i);
 
-                // Lógica de Crafting
-                if (player.hasItem(r.inputId, r.inputCount)) {
-                    // Tenta adicionar o produto
-                    if (player.addItem(r.outputId, r.outputCount)) {
-                        // Se tiver espaço e adicionou, remove os materiais
-                        player.removeItem(r.inputId, r.inputCount);
-                        System.out.println("Crafted: " + r.name);
-                    } else {
-                        System.out.println("Sem espaço para o produto!");
-                    }
-                } else {
-                    System.out.println("Faltam materiais!");
+                boolean success = craftingManager.craft(r, player); // <--- A MÁGICA ACONTECE AQUI
+
+                if (success) {
+                    // Opcional: Tocar som de sucesso ou atualizar UI imediato
+                    updateInventoryDisplay(player); // Forçar atualização visual
                 }
                 return;
             }

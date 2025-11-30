@@ -17,6 +17,7 @@ import jogo.voxel.VoxelWorld;
 import com.jme3.audio.AudioNode;
 import com.jme3.audio.AudioData;
 
+
 public class PlayerAppState extends BaseAppState {
 
     private final Node rootNode;
@@ -189,7 +190,7 @@ public class PlayerAppState extends BaseAppState {
         float speed = moveSpeed * (input.isSprinting() ? sprintMultiplier : 1f);
         characterControl.setWalkDirection(dir.mult(speed));
 
-        // jump
+        // Jump
         if (input.consumeJumpRequested() && characterControl.isOnGround()) {
             characterControl.jump();
         }
