@@ -91,7 +91,47 @@ public class RenderAppState extends BaseAppState {
             Geometry g = new Geometry(obj.getName(), new Box(0.3f, 0.3f, 0.3f));
             g.setMaterial(colored(ColorRGBA.Yellow));
             return g;
+            // --- CÓDIGO NOVO PARA O MODELO ---
+        } else if (obj instanceof jogo.gameobject.character.Sheep) {
+            // Criar um NÓ para podermos ter o modelo + debug juntos
+            Node sheepNode = new Node("SheepVisual");
+
+            try {
+                // --- 1. Tenta carregar o modelo (CONFIRMA O CAMINHO) ---
+                // Nota: Windows costuma ignorar maiúsculas, mas Java/Linux não!
+                // Verifica se é "Sheep.gltf" ou "sheep.gltf" na pasta.
+                Spatial model = assetManager.loadModel("Models/SheepNPC/source/sheep.gltf");
+
+                // --- 2. Tenta várias escalas (Descomenta uma se não vires) ---
+                model.setLocalScale(1.5f); // Tenta aumentar um pouco
+                // model.setLocalScale(10.0f); // Tenta muito grande
+                // model.setLocalScale(0.1f);  // Tenta muito pequeno
+
+                sheepNode.attachChild(model);
+                System.out.println("SUCESSO: Modelo da ovelha carregado!");
+
+            } catch (Exception e) {
+                System.out.println("ERRO CRÍTICO: Não encontrei o ficheiro! " + e.getMessage());
+                e.printStackTrace(); // Mostra o erro todo na consola
+            }
+
+            // --- 3. CAIXA DE DEBUG (Vermelha) ---
+            // Isto vai aparecer SEMPRE, mesmo que o modelo falhe.
+            // Se vires isto a mexer, a lógica funciona.
+            Geometry debugBox = new Geometry("DebugBox", new Box(0.2f, 0.8f, 0.2f));
+            Material mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+            mat.setColor("Color", ColorRGBA.Red);
+            debugBox.setMaterial(mat);
+            debugBox.setLocalTranslation(0, 1.0f, 0); // Um pouco acima do chão
+
+            sheepNode.attachChild(debugBox);
+            // ------------------------------------
+
+            return sheepNode;
         }
+
+        // ---------------------------------
+
         return null;
     }
 

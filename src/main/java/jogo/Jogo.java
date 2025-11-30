@@ -12,6 +12,7 @@ import jogo.appstate.WorldAppState;
 import jogo.appstate.HudAppState;
 import jogo.appstate.RenderAppState;
 import jogo.appstate.InteractionAppState;
+import jogo.appstate.NpcAppState;
 import jogo.engine.GameRegistry;
 import jogo.engine.RenderIndex;
 
@@ -67,6 +68,21 @@ public class Jogo extends SimpleApplication {
 
         PlayerAppState player = new PlayerAppState(rootNode, assetManager, cam, input, physicsSpace, world);
         stateManager.attach(player);
+
+        // --- NOVO: Adicionar Sistema de NPCs ---
+        // (Precisamos de passar o registry e o playerState)
+        NpcAppState npcState = new NpcAppState(rootNode, physicsSpace, registry, player);
+        stateManager.attach(npcState);
+
+        // --- NOVO: Spawnar uma Ovelha de Teste ---
+        jogo.gameobject.character.Sheep ovelha = new jogo.gameobject.character.Sheep();
+        // Colocar perto do spawn do jogador
+        ovelha.setPosition(28.5f, 25f, 26.5f);
+        registry.add(ovelha);
+        // -----------------------------------------
+
+        // ... (resto do código: Post-processing, HUD) ...
+
 
         // Post-processing: SSAO for subtle contact shadows
         try {
