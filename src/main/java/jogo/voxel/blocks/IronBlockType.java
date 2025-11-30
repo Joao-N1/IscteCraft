@@ -31,6 +31,6 @@ public class IronBlockType extends VoxelBlockType {
 
     @Override
     public float getHardness() {
-        return 10.50f; // Duro
+        return 10.50f;
     }
 }

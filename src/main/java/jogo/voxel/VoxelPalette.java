@@ -38,6 +38,7 @@ public class VoxelPalette {
         p.register(new DiamondBlockType()); // id 10
         p.register(new PlanksBlockType()); // id 11
         p.register(new StickBlockType());  // id 12
+        p.register(new CraftingTableBlockType()); // id 13
         return p;
     }
 
@@ -54,4 +55,5 @@ public class VoxelPalette {
     public static final byte DIAMOND_ID = 10;
     public static final byte PLANKS_ID = 11;
     public static final byte STICK_ID = 12;
+    public static final byte CRAFTING_TABLE_ID = 13;
 }
