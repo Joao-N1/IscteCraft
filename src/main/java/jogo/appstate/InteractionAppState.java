@@ -63,9 +63,27 @@ public class InteractionAppState extends BaseAppState {
                 vw.pickFirstSolid(cam, reach).ifPresent(hit -> {
                     VoxelWorld.Vector3i cell = hit.cell;
                     System.out.println("TODO: interact with voxel at " + cell.x + "," + cell.y + "," + cell.z);
+                    byte blockId = vw.getBlock(cell.x, cell.y, cell.z);
+
+                    // --- DEBUG: DIZ-NOS O QUE CLICÁSTE ---
+                    System.out.println("CLIQUEI NO BLOCO ID: " + blockId);
+                    System.out.println("O ID DA MESA É: " + jogo.voxel.VoxelPalette.CRAFTING_TABLE_ID);
+                    // -------------------------------------
+
+                    if (blockId == jogo.voxel.VoxelPalette.CRAFTING_TABLE_ID) {
+                        System.out.println("-> ABRINDO A MESA!"); // Debug
+                        input.setMouseCaptured(false);
+                        jogo.appstate.HudAppState hud = getState(jogo.appstate.HudAppState.class);
+                        if (hud != null) hud.openCraftingTable();
+                    } else {
+                        System.out.println("-> Isto não é uma mesa."); // Debug
+                    }
                 });
             }
-        }
+        };
+
+
+
 
         // --- NOVA LÓGICA: COLOCAR BLOCO (Botão Direito) ---
         if (input.consumeUseRequested()) {

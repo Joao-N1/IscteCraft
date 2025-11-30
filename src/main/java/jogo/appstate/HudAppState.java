@@ -7,49 +7,61 @@ import com.jme3.asset.AssetManager;
 import com.jme3.font.BitmapFont;
 import com.jme3.font.BitmapText;
 import com.jme3.scene.Node;
-import com.jme3.texture.Texture2D;
 import com.jme3.ui.Picture;
 import com.jme3.math.ColorRGBA;
-import jogo.crafting.CraftingManager;
+import com.jme3.math.Vector2f;
+import com.jme3.material.Material;
 import jogo.gameobject.character.Player;
 import jogo.gameobject.item.ItemStack;
 import jogo.voxel.VoxelPalette;
+import jogo.crafting.Recipe;
+
 import java.util.ArrayList;
 import java.util.List;
-import com.jme3.math.Vector2f;
-import jogo.crafting.Recipe;
-import com.jme3.material.Material;
 
 public class HudAppState extends BaseAppState {
 
     private final Node guiNode;
     private final AssetManager assetManager;
-
-    //Elementos da interface do jogador
     private BitmapText crosshair;
-    private List<Picture> hotbarSlots = new ArrayList<>();
-    private List<BitmapText> hotbarTexts = new ArrayList<>(); // Textos de quantidade
-    private List<Picture> hotbarIcons = new ArrayList<>();
-    private Picture selector;
-    private List<Picture> hearts = new ArrayList<>();
+    private BitmapFont guiFont;
 
-    // Texturas pré-carregadas para performance
-    private Texture2D texHeartFull;
-    private Texture2D texHeartHalf;
-    private Texture2D texHeartEmpty;
-
-    // --- NOVO: Inventário ---
+    // --- UI INVENTÁRIO (Hotbar e Principal) ---
     private Node inventoryNode = new Node("InventoryNode");
+    private List<Picture> hotbarSlots = new ArrayList<>();
+    private List<BitmapText> hotbarTexts = new ArrayList<>();
+    private List<Picture> hotbarIcons = new ArrayList<>();
+
     private List<Picture> mainInvSlots = new ArrayList<>();
     private List<BitmapText> mainInvTexts = new ArrayList<>();
     private List<Picture> mainInvIcons = new ArrayList<>();
+
+    private Picture selector;
+    private Picture cursorItemIcon; // Item "preso" ao rato
+    private List<Picture> hearts = new ArrayList<>();
+
+    // --- UI CRAFTING ---
+    // Receitas do Jogador (Básico - sempre visível no inventário)
+    private List<Recipe> playerRecipes = new ArrayList<>();
+    private List<Picture> playerRecipeIcons = new ArrayList<>();
+
+    // Receitas da Mesa (Avançado - só na mesa)
+    private Node craftingTableNode = new Node("CraftingTableUI");
+    private Picture craftingBg;
+    private List<Recipe> tableRecipes = new ArrayList<>();
+    private List<Picture> tableRecipeIcons = new ArrayList<>();
+
+    // Visualização da Receita Selecionada na Mesa (Grelha 3x3 + Resultado)
+    private List<Picture> gridInputIcons = new ArrayList<>(); // 9 slots visuais para mostrar materiais
+    private Picture resultIcon; // O botão final onde clicas para craftar
+    private Recipe selectedRecipe = null;
+
+    // Estados
     private boolean isInventoryVisible = false;
+    private boolean isCraftingOpen = false;
     private int currentSlotIndex = 0;
-    private BitmapFont guiFont;
 
-    private Picture cursorItemIcon;
-
-    // Tamanho dos elementos da interface
+    // Configurações Visuais
     private final float HOTBAR_WIDTH = 400f;
     private final float HOTBAR_HEIGHT = 44f;
     private final float HEART_SIZE = 20f;
@@ -59,137 +71,69 @@ public class HudAppState extends BaseAppState {
         this.assetManager = assetManager;
     }
 
-    // --- NOVO: Crafting ---
-    private Node craftingNode = new Node("CraftingNode");
-    private CraftingManager craftingManager;
-    private List<Recipe> recipes = new ArrayList<>();
-    private List<Picture> recipeIcons = new ArrayList<>();
-    private List<BitmapText> recipeLabels = new ArrayList<>(); // Para mostrar o custo
-
     @Override
     protected void initialize(Application app) {
-
-        // Carregar texturas dos corações UMA vez
-        texHeartFull = (Texture2D) assetManager.loadTexture("Interface/heart_full.png");
-        try {
-            texHeartHalf = (Texture2D) assetManager.loadTexture("Interface/heart_half.png");
-            texHeartEmpty = (Texture2D) assetManager.loadTexture("Interface/heart_empty.png");
-        } catch (Exception e) {
-            System.out.println("Aviso: Texturas heart_half ou heart_empty em falta. A usar heart_full.");
-            texHeartHalf = texHeartFull;
-            texHeartEmpty = texHeartFull;
-        }
-
-        craftingManager = new CraftingManager();
-
         guiFont = assetManager.loadFont("Interface/Fonts/Default.fnt");
+
+        // 1. Mira
         crosshair = new BitmapText(guiFont, false);
         crosshair.setText("+");
         crosshair.setSize(guiFont.getCharSet().getRenderedSize() * 2f);
         guiNode.attachChild(crosshair);
-        centerCrosshair();
+
+        // 2. Inicializar Elementos UI
         initHotbar(app);
         initHearts(app);
         initInventory(app);
-        initCrafting(app);
-        // Inicializar o ícone do cursor (invisível por defeito)
-        cursorItemIcon = new Picture("Interface/CursorItem.png");
-        cursorItemIcon.setWidth(HOTBAR_WIDTH / 9f * 0.6f);
-        cursorItemIcon.setHeight(HOTBAR_WIDTH / 9f * 0.6f);
-        cursorItemIcon.setCullHint(Node.CullHint.Always); // Escondido
-        guiNode.attachChild(cursorItemIcon); // Anexar por último para ficar em cima de tudo
+        initCursorItem();
+
+        // 3. Inicializar Crafting (Jogador e Mesa)
+        initCraftingSystems();
+
         refreshLayout();
-        System.out.println("HudAppState initialized: UI elements attached");
-
-        initCrafting(app);
+        System.out.println("HudAppState initialized.");
     }
 
-    private void initCrafting(Application app) {
-        // Limpar listas antigas para garantir que começamos do zero (segurança extra)
-        recipeIcons.forEach(Picture::removeFromParent);
-        recipeIcons.clear();
-        recipeLabels.forEach(BitmapText::removeFromParent);
-        recipeLabels.clear();
-
-        // 1. Definir Receitas
-        List<Recipe> recipes = craftingManager.getRecipes();
-
-        // 2. Criar UI visual para cada receita
-        float iconSize = 40f;
-
-        for (int i = 0; i < recipes.size(); i++) {
-            Recipe r = recipes.get(i);
-
-            // Ícone do Produto Final
-            Picture icon = new Picture("Recipe_" + i);
-            try {
-                icon.setImage(assetManager, "Textures/" + getTextureNameById(r.outputId), true);
-            } catch (Exception e) { }
-
-            icon.setWidth(iconSize);
-            icon.setHeight(iconSize);
-            craftingNode.attachChild(icon);
-            recipeIcons.add(icon);
-
-            // Texto de Custo
-            BitmapText costText = new BitmapText(guiFont, false);
-            costText.setSize(guiFont.getCharSet().getRenderedSize() * 0.7f);
-            costText.setText(r.inputCount + "x Mat");
-            costText.setColor(ColorRGBA.Yellow);
-            craftingNode.attachChild(costText);
-            recipeLabels.add(costText);
-        }
-    }
+    // --- INICIALIZAÇÃO UI BÁSICA ---
 
     private void initHotbar(Application app) {
-        // Calcular a largura de UM quadrado baseado na largura total desejada / 9
         float slotWidth = HOTBAR_WIDTH / 9f;
-
-        // Criar os 9 slots individuais
         for (int i = 0; i < 9; i++) {
+            // Fundo
             Picture slot = new Picture("HotbarSlot_" + i);
-            // AQUI: Certifica-te que tens a imagem 'hotbarsquare.png' na pasta Interface
-            slot.setImage(assetManager, "Interface/hotbarsquare2.png", true);
-
+            slot.setImage(assetManager, "Interface/hotbarsquare.png", true);
             slot.setWidth(slotWidth);
             slot.setHeight(HOTBAR_HEIGHT);
-
             guiNode.attachChild(slot);
             hotbarSlots.add(slot);
 
-            // Ícone do Item (Inicia vazio/invisível)
+            // Ícone
             Picture icon = new Picture("HotbarIcon_" + i);
-            icon.setWidth(slotWidth * 0.6f); // Um pouco menor que o slot
+            icon.setWidth(slotWidth * 0.6f);
             icon.setHeight(HOTBAR_HEIGHT * 0.6f);
             guiNode.attachChild(icon);
             hotbarIcons.add(icon);
 
-            // Texto de Quantidade
+            // Texto
             BitmapText count = new BitmapText(guiFont, false);
-            count.setSize(guiFont.getCharSet().getRenderedSize() * 0.8f); // Texto pequeno
+            count.setSize(guiFont.getCharSet().getRenderedSize() * 0.8f);
             count.setColor(ColorRGBA.White);
-            count.setText(""); // Vazio por defeito
+            count.setText("");
             guiNode.attachChild(count);
             hotbarTexts.add(count);
         }
-
-        // Criar a imagem do Selector (o quadrado que se move)
+        // Selector
         selector = new Picture("Selector");
         selector.setImage(assetManager, "Interface/selector.png", true);
-
-        // O selector deve ter o mesmo tamanho que um slot individual
         selector.setWidth(slotWidth);
         selector.setHeight(HOTBAR_HEIGHT);
-
-        // Adicionamos o selector DEPOIS dos slots para ele ficar "em cima" visualmente
         guiNode.attachChild(selector);
     }
 
-    //Cria as imagens dos corações na tela usando a textura carregada
     private void initHearts(Application app) {
         for (int i = 0; i < 10; i++) {
             Picture heart = new Picture("Heart_" + i);
-            heart.setTexture(assetManager, texHeartFull, true); // Usa a textura carregada
+            heart.setImage(assetManager, "Interface/heart_full.png", true);
             heart.setWidth(HEART_SIZE);
             heart.setHeight(HEART_SIZE);
             guiNode.attachChild(heart);
@@ -197,18 +141,15 @@ public class HudAppState extends BaseAppState {
         }
     }
 
-    // --- NOVO: Criar os 27 slots do inventário ---
     private void initInventory(Application app) {
-        float slotSize = HOTBAR_WIDTH / 9f; // Mesmo tamanho da hotbar
-
-        // 3 linhas, 9 colunas
+        float slotSize = HOTBAR_WIDTH / 9f;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
+                // Fundo
                 Picture slot = new Picture("InvSlot_" + row + "_" + col);
-                slot.setImage(assetManager, "Interface/hotbarsquare2.png", true);
+                slot.setImage(assetManager, "Interface/hotbarsquare.png", true);
                 slot.setWidth(slotSize);
-                slot.setHeight(slotSize); // Quadrado
-
+                slot.setHeight(slotSize);
                 inventoryNode.attachChild(slot);
                 mainInvSlots.add(slot);
 
@@ -216,7 +157,7 @@ public class HudAppState extends BaseAppState {
                 Picture icon = new Picture("InvIcon_" + row + "_" + col);
                 icon.setWidth(slotSize * 0.6f);
                 icon.setHeight(slotSize * 0.6f);
-                inventoryNode.attachChild(icon); // Adicionar ao nó do inventário
+                inventoryNode.attachChild(icon);
                 mainInvIcons.add(icon);
 
                 // Texto
@@ -228,85 +169,329 @@ public class HudAppState extends BaseAppState {
                 mainInvTexts.add(count);
             }
         }
-        // Nota: Não fazemos guiNode.attachChild(inventoryNode) aqui.
-        // Só fazemos quando o jogador abrir o inventário.
     }
 
-    public void setInventoryVisible(boolean visible) {
-        this.isInventoryVisible = visible;
-        if (visible) {
-            guiNode.attachChild(inventoryNode);
-            guiNode.attachChild(craftingNode);
-            // Esconder a mira quando inventário está aberto
-            crosshair.removeFromParent();
+    private void initCursorItem() {
+        cursorItemIcon = new Picture("CursorItem");
+        try { cursorItemIcon.setImage(assetManager, "Interface/CursorItem.png", true); } catch(Exception e){}
+        cursorItemIcon.setWidth(HOTBAR_WIDTH / 9f * 0.6f);
+        cursorItemIcon.setHeight(HOTBAR_WIDTH / 9f * 0.6f);
+        cursorItemIcon.setCullHint(Node.CullHint.Always);
+        guiNode.attachChild(cursorItemIcon);
+    }
+
+    // --- INICIALIZAÇÃO CRAFTING ---
+
+    private void initCraftingSystems() {
+        playerRecipes.clear();
+        tableRecipes.clear();
+
+        // Receitas
+        Recipe rPlanks = new Recipe("Planks", VoxelPalette.Wood_ID, 1, VoxelPalette.PLANKS_ID, 4);
+        Recipe rSticks = new Recipe("Sticks", VoxelPalette.PLANKS_ID, 2, VoxelPalette.STICK_ID, 4);
+        Recipe rTable = new Recipe("Table", VoxelPalette.PLANKS_ID, 4, VoxelPalette.CRAFTING_TABLE_ID, 1);
+
+        // Jogador (Inventário normal)
+        playerRecipes.add(rPlanks);
+        playerRecipes.add(rTable);
+        playerRecipes.add(rSticks);
+        createRecipeIcons(playerRecipes, playerRecipeIcons, inventoryNode);
+
+        // Mesa (Interface dedicada)
+        initTableUI();
+        tableRecipes.add(rPlanks);
+        tableRecipes.add(rSticks);
+        // tableRecipes.add(rTable);
+        createRecipeIcons(tableRecipes, tableRecipeIcons, craftingTableNode);
+    }
+
+    private void initTableUI() {
+        craftingBg = new Picture("CraftingBg");
+        try { craftingBg.setImage(assetManager, "Interface/CraftingUI.png", true); }
+        catch (Exception e) { craftingBg.setImage(assetManager, "Interface/hotbarsquare.png", true); }
+
+        // Tamanho pedido por ti
+        craftingBg.setWidth(400f);
+        craftingBg.setHeight(300f);
+        craftingTableNode.attachChild(craftingBg);
+
+        // 1. Criar a Grelha Visual (3x3) para mostrar onde os materiais ficam
+        float slotSize = 30f;
+        for (int i = 0; i < 9; i++) {
+            Picture gridIcon = new Picture("GridIcon_" + i);
+            gridIcon.setWidth(slotSize);
+            gridIcon.setHeight(slotSize);
+            gridIcon.setCullHint(Node.CullHint.Always); // Invisível por defeito
+            craftingTableNode.attachChild(gridIcon);
+            gridInputIcons.add(gridIcon);
+        }
+
+        // 2. Criar o Ícone de Resultado (Botão de Crafting)
+        resultIcon = new Picture("ResultIcon");
+        resultIcon.setWidth(slotSize * 1.5f);
+        resultIcon.setHeight(slotSize * 1.5f);
+        resultIcon.setCullHint(Node.CullHint.Always);
+        craftingTableNode.attachChild(resultIcon);
+    }
+
+    private void createRecipeIcons(List<Recipe> rList, List<Picture> iList, Node parent) {
+        float iconSize = 40f;
+        for (int i = 0; i < rList.size(); i++) {
+            Recipe r = rList.get(i);
+            Picture icon = new Picture("Rec_" + r.name);
+            try {
+                icon.setImage(assetManager, "Textures/" + getTextureNameById(r.outputId), true);
+            } catch(Exception e){}
+            icon.setWidth(iconSize);
+            icon.setHeight(iconSize);
+            parent.attachChild(icon);
+            iList.add(icon);
+
+            // Label de custo
+            BitmapText lbl = new BitmapText(guiFont, false);
+            lbl.setSize(guiFont.getCharSet().getRenderedSize() * 0.7f);
+            lbl.setText(r.inputCount + "x");
+            lbl.setColor(ColorRGBA.Yellow);
+            parent.attachChild(lbl);
+            icon.setUserData("label", lbl);
+        }
+    }
+
+    // --- UPDATE LOOP ---
+
+    @Override
+    public void update(float tpf) {
+        centerCrosshair();
+        refreshLayout();
+
+        InputAppState input = getState(InputAppState.class);
+        PlayerAppState playerState = getState(PlayerAppState.class);
+
+        if (playerState != null) {
+            Player player = playerState.getPlayer();
+
+            updateInventoryDisplay(player);
+            updateCursorItemVisual(player, getApplication().getInputManager().getCursorPosition());
+
+            if (input != null && input.consumeUiClickRequested()) {
+                Vector2f mousePos = getApplication().getInputManager().getCursorPosition();
+
+                // 1. Inventário Aberto (tecla I)
+                if (isInventoryVisible) {
+                    handleInventoryClick(mousePos, player);
+                    // Se a mesa NÃO estiver aberta, o clique na receita faz craft imediato
+                    if (!isCraftingOpen) {
+                        checkInstantCraftClick(mousePos, player, playerRecipes, playerRecipeIcons);
+                    }
+                }
+
+                // 2. Mesa de Crafting Aberta (tecla E)
+                if (isCraftingOpen) {
+                    handleTableInteraction(mousePos, player);
+                }
+            }
+        }
+    }
+
+    // --- LÓGICA DE INTERAÇÃO ---
+
+    // Interação na Mesa: Selecionar Receita OU Clicar no Resultado
+    private void handleTableInteraction(Vector2f mouse, Player p) {
+        // A. Verificar se clicou numa receita da lista (lado esquerdo)
+        for (int i = 0; i < tableRecipeIcons.size(); i++) {
+            Picture icon = tableRecipeIcons.get(i);
+            if (isMouseOver(icon, mouse)) {
+                selectedRecipe = tableRecipes.get(i);
+                updateGridVisuals(); // Mostra os materiais na grelha
+                return;
+            }
+        }
+
+        // B. Verificar se clicou no Resultado (para craftar)
+        if (isMouseOver(resultIcon, mouse) && selectedRecipe != null) {
+            // Tentar craftar
+            if (p.hasItem(selectedRecipe.inputId, selectedRecipe.inputCount)) {
+                if (p.addItem(selectedRecipe.outputId, selectedRecipe.outputCount)) {
+                    p.removeItem(selectedRecipe.inputId, selectedRecipe.inputCount);
+                    System.out.println("Crafted na Mesa: " + selectedRecipe.name);
+                } else {
+                    System.out.println("Inventário cheio!");
+                }
+            } else {
+                System.out.println("Faltam materiais!");
+            }
+        }
+    }
+
+    // Atualiza a visualização da grelha na mesa
+    private void updateGridVisuals() {
+        if (selectedRecipe == null) {
+            // Esconder tudo se nada selecionado
+            for (Picture p : gridInputIcons) p.setCullHint(Node.CullHint.Always);
+            resultIcon.setCullHint(Node.CullHint.Always);
+            return;
+        }
+
+        // 1. Mostrar Materiais (Input)
+        // Como as receitas são simples, vamos preencher os primeiros slots com o material
+        for (int i = 0; i < 9; i++) {
+            if (i < selectedRecipe.inputCount) {
+                try {
+                    gridInputIcons.get(i).setImage(assetManager, "Textures/" + getTextureNameById(selectedRecipe.inputId), true);
+                    gridInputIcons.get(i).setCullHint(Node.CullHint.Never);
+                } catch (Exception e) {}
+            } else {
+                gridInputIcons.get(i).setCullHint(Node.CullHint.Always);
+            }
+        }
+
+        // 2. Mostrar Resultado (Output)
+        try {
+            resultIcon.setImage(assetManager, "Textures/" + getTextureNameById(selectedRecipe.outputId), true);
+            resultIcon.setCullHint(Node.CullHint.Never);
+        } catch (Exception e) {}
+    }
+
+    // Crafting Instantâneo (Inventário Simples)
+    private void checkInstantCraftClick(Vector2f mouse, Player p, List<Recipe> recipes, List<Picture> icons) {
+        for (int i = 0; i < icons.size(); i++) {
+            if (isMouseOver(icons.get(i), mouse)) {
+                Recipe r = recipes.get(i);
+                if (p.hasItem(r.inputId, r.inputCount)) {
+                    if (p.addItem(r.outputId, r.outputCount)) {
+                        p.removeItem(r.inputId, r.inputCount);
+                        System.out.println("Crafted (Instant): " + r.name);
+                    }
+                }
+                return;
+            }
+        }
+    }
+
+    private void handleInventoryClick(Vector2f mousePos, Player player) {
+        for (int i = 0; i < 9; i++) {
+            if (isMouseOver(hotbarSlots.get(i), mousePos)) {
+                clickSlot(player.getHotbar(), i, player);
+                return;
+            }
+        }
+        for (int i = 0; i < mainInvSlots.size(); i++) {
+            if (isMouseOver(mainInvSlots.get(i), mousePos)) {
+                clickSlot(player.getMainInventory(), i, player);
+                return;
+            }
+        }
+    }
+
+    private void clickSlot(ItemStack[] inventory, int index, Player player) {
+        ItemStack slotItem = inventory[index];
+        ItemStack handItem = player.getCursorItem();
+
+        if (handItem == null) {
+            if (slotItem != null) {
+                player.setCursorItem(slotItem);
+                inventory[index] = null;
+            }
         } else {
-            inventoryNode.removeFromParent();
-            craftingNode.removeFromParent();
-            // Mostrar a mira de volta
-            guiNode.attachChild(crosshair);
+            if (slotItem == null) {
+                inventory[index] = handItem;
+                player.setCursorItem(null);
+            } else {
+                if (slotItem.getId() == handItem.getId()) {
+                    int space = ItemStack.MAX_STACK - slotItem.getAmount();
+                    if (space >= handItem.getAmount()) {
+                        slotItem.add(handItem.getAmount());
+                        player.setCursorItem(null);
+                    } else {
+                        slotItem.setAmount(ItemStack.MAX_STACK);
+                        handItem.add(-space);
+                    }
+                } else {
+                    inventory[index] = handItem;
+                    player.setCursorItem(slotItem);
+                }
+            }
         }
     }
 
-    // --- CORREÇÃO: Atualizar a variável e forçar refresh ---
-    public void updateSelector(int slotIndex) {
-        this.currentSlotIndex = slotIndex; // Guardar o novo índice
-        refreshLayout(); // Atualizar visual imediatamente
+    private boolean isMouseOver(Picture pic, Vector2f mouse) {
+        float x = pic.getWorldTranslation().x;
+        float y = pic.getWorldTranslation().y;
+        float w = pic.getWidth();
+        float h = pic.getHeight();
+        return mouse.x >= x && mouse.x <= x + w && mouse.y >= y && mouse.y <= y + h;
     }
 
-    // --- LÓGICA DE DESENHAR ITENS E NÚMEROS ---
-    public void updateInventoryDisplay(Player player) {
-        // Atualizar Hotbar
-        updateSlotList(player.getHotbar(), hotbarSlots, hotbarIcons, hotbarTexts, 0f);
+    // --- VISUALIZADORES ---
 
-        // Atualizar Inventário Principal
+    private void updateInventoryDisplay(Player player) {
+        updateSlotList(player.getHotbar(), hotbarSlots, hotbarIcons, hotbarTexts);
         if (isInventoryVisible) {
-            updateSlotList(player.getMainInventory(), mainInvSlots, mainInvIcons, mainInvTexts, 0f);
+            updateSlotList(player.getMainInventory(), mainInvSlots, mainInvIcons, mainInvTexts);
         }
     }
 
-    private void updateSlotList(ItemStack[] items, List<Picture> bgList, List<Picture> iconList, List<BitmapText> textList, float yOffset) {
+    private void updateSlotList(ItemStack[] items, List<Picture> bgList, List<Picture> iconList, List<BitmapText> textList) {
         for (int i = 0; i < items.length; i++) {
             ItemStack stack = items[i];
             Picture icon = iconList.get(i);
             BitmapText text = textList.get(i);
-            Picture bg = bgList.get(i); // Precisamos da posição do fundo para alinhar
+            Picture bg = bgList.get(i);
 
             if (stack != null && stack.getAmount() > 0) {
-                // 1. Atualizar Textura do Ícone
-                // Nota: Aqui precisas de uma maneira de converter ID para Texture Path.
-                // Como exemplo simples, vou assumir nomes diretos ou usar um switch:
                 String texName = getTextureNameById(stack.getId());
                 try {
                     icon.setImage(assetManager, "Textures/" + texName, true);
-                    icon.setCullHint(Node.CullHint.Never); // Mostrar
-                } catch (Exception e) {
-                    icon.setCullHint(Node.CullHint.Always);
-                }
+                    icon.setCullHint(Node.CullHint.Never);
+                } catch (Exception e) { icon.setCullHint(Node.CullHint.Always); }
 
-                // Posicionar ícone no centro do slot
-                float x = bg.getLocalTranslation().x + (bg.getWidth() - icon.getWidth()) / 2f;
-                float y = bg.getLocalTranslation().y + (bg.getHeight() - icon.getHeight()) / 2f;
+                float x = bg.getWorldTranslation().x + (bg.getWidth() - icon.getWidth()) / 2f;
+                float y = bg.getWorldTranslation().y + (bg.getHeight() - icon.getHeight()) / 2f;
                 icon.setPosition(x, y);
 
-                // 2. Atualizar Texto da Quantidade
                 if (stack.getAmount() > 1) {
                     text.setText(String.valueOf(stack.getAmount()));
-                    // Posicionar no canto inferior direito do slot
-                    float tx = bg.getLocalTranslation().x + bg.getWidth() - text.getLineWidth() - 8f;
-                    float ty = bg.getLocalTranslation().y + text.getLineHeight() + 5f;
-                    text.setLocalTranslation(tx, ty, 1); // Z=1 para ficar em cima
+                    float tx = bg.getWorldTranslation().x + bg.getWidth() - text.getLineWidth() - 2f;
+                    float ty = bg.getWorldTranslation().y + text.getLineHeight();
+                    text.setLocalTranslation(tx, ty, 1);
                 } else {
                     text.setText("");
                 }
             } else {
-                // Slot vazio
-                icon.setCullHint(Node.CullHint.Always); // Esconder
+                icon.setCullHint(Node.CullHint.Always);
                 text.setText("");
             }
         }
     }
 
-    // Método auxiliar simples (Idealmente estaria no VoxelBlockType)
+    private void updateCursorItemVisual(Player player, Vector2f mousePos) {
+        ItemStack cursorStack = player.getCursorItem();
+        if (cursorStack != null && cursorStack.getAmount() > 0) {
+            try {
+                cursorItemIcon.setImage(assetManager, "Textures/" + getTextureNameById(cursorStack.getId()), true);
+            } catch (Exception e) {}
+            cursorItemIcon.setPosition(mousePos.x - cursorItemIcon.getWidth()/2, mousePos.y - cursorItemIcon.getHeight()/2);
+            cursorItemIcon.setCullHint(Node.CullHint.Never);
+            cursorItemIcon.setLocalTranslation(cursorItemIcon.getLocalTranslation().x, cursorItemIcon.getLocalTranslation().y, 10f);
+        } else {
+            cursorItemIcon.setCullHint(Node.CullHint.Always);
+        }
+    }
+
+    private void updateRecipeColors(List<Recipe> rList, List<Picture> iList, Player p) {
+        for (int i = 0; i < rList.size(); i++) {
+            Recipe r = rList.get(i);
+            Picture icon = iList.get(i);
+            try {
+                // Colorir de cinzento se não houver materiais, branco se houver
+                if (icon.getMaterial() != null) {
+                    boolean has = p.hasItem(r.inputId, r.inputCount);
+                    icon.getMaterial().setColor("Color", has ? ColorRGBA.White : ColorRGBA.Gray);
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+
     private String getTextureNameById(byte id) {
         if (id == VoxelPalette.DIRT_ID) return "DirtBlock.png";
         if (id == VoxelPalette.GRASS_ID) return "GrassBlock.png";
@@ -319,112 +504,46 @@ public class HudAppState extends BaseAppState {
         if (id == VoxelPalette.DIAMOND_ID) return "DiamondBlock.png";
         if (id == VoxelPalette.PLANKS_ID) return "PlanksBlock.png";
         if (id == VoxelPalette.STICK_ID) return "Stick.png";
-        return "DirtBlock.png"; // Fallback
+        if (id == VoxelPalette.CRAFTING_TABLE_ID) return "CraftingTableBlock.png";
+        return "DirtBlock.png";
     }
-    // ------------------------------------------
 
-    /**
-     * Recalcula as posições baseado no tamanho atual da janela.
-     * Importante se o jogador redimensionar a janela.
-     */
-    private void refreshLayout() {
-        SimpleApplication sapp = (SimpleApplication) getApplication();
-        float screenW = sapp.getCamera().getWidth();
-        float screenH = sapp.getCamera().getHeight();
+    // --- GESTÃO ---
 
-        // 1. Centrar Mira
-        float chX = (screenW - crosshair.getLineWidth()) / 2f;
-        float chY = (screenH + crosshair.getLineHeight()) / 2f;
-        crosshair.setLocalTranslation(chX, chY, 0);
+    public void openCraftingTable() {
+        if (isCraftingOpen) return;
+        isCraftingOpen = true;
+        guiNode.attachChild(craftingTableNode);
+        setInventoryVisible(true);
+        // Reset seleção
+        selectedRecipe = null;
+        updateGridVisuals();
+    }
 
-        // --- Posicionamento da Hotbar ---
-        // Largura de cada slot individual
-        float slotWidth = HOTBAR_WIDTH / 9f;
+    public void closeCraftingTable() {
+        isCraftingOpen = false;
+        craftingTableNode.removeFromParent();
+        setInventoryVisible(false);
+    }
 
-        // Ponto de partida X (para ficar centrado no ecrã)
-        float startX = (screenW / 2f) - (HOTBAR_WIDTH / 2f);
-        float hotbarY = 10f; // Margem do fundo
-
-        // Atualizar posição de cada quadrado da hotbar
-        for (int i = 0; i < hotbarSlots.size(); i++) {
-            Picture slot = hotbarSlots.get(i);
-            // A posição X é o inicio + (índice * largura).
-            // Como não adicionamos margem extra, eles ficam colados.
-            float x = startX + (i * slotWidth);
-            slot.setPosition(x, hotbarY);
+    public void setInventoryVisible(boolean visible) {
+        if (isCraftingOpen && !visible) {
+            closeCraftingTable();
+            return;
         }
-
-        // --- CORREÇÃO: Usar a variável currentSlotIndex ---
-        float selectorX = startX + (currentSlotIndex * slotWidth);
-        selector.setPosition(selectorX, hotbarY);
-        // ----
-
-        // --- Posicionamento dos Corações ---
-        float heartsStartX = startX;
-        float heartsY = hotbarY + HOTBAR_HEIGHT + 10f; // 10px acima da hotbar
-
-        for (int i = 0; i < hearts.size(); i++) {
-            Picture heart = hearts.get(i);
-            float x = heartsStartX + (i * (HEART_SIZE + 2f)); // Pequeno espaço entre corações
-            heart.setPosition(x, heartsY);
+        this.isInventoryVisible = visible;
+        if (visible) {
+            guiNode.attachChild(inventoryNode);
+            crosshair.removeFromParent();
+        } else {
+            inventoryNode.removeFromParent();
+            guiNode.attachChild(crosshair);
         }
-        // --- Layout do Inventário (Centrado na tela, acima da hotbar) ---
-        float invStartY = heartsY + 50f; // Um pouco acima dos corações
+    }
 
-        // O array mainInvSlots foi preenchido linha a linha.
-        // Linha 0 é a de baixo do inventário principal
-        for (int i = 0; i < mainInvSlots.size(); i++) {
-            int row = i / 9; // 0, 1 ou 2
-            int col = i % 9; // 0 a 8
-
-            Picture slot = mainInvSlots.get(i);
-            float x = startX + (col * slotWidth);
-            // Inverter row para desenhar de baixo para cima ou ajustar conforme preferência
-            // Vamos desenhar: Linha 2 (topo), Linha 1 (meio), Linha 0 (baixo)
-            float y = invStartY + ((2 - row) * slotWidth);
-
-            slot.setPosition(x, y);
-        }
-        // --- IMPORTANTE: Atualizar os ícones e textos ---
-        PlayerAppState playerState = getState(PlayerAppState.class);
-        if (playerState != null && playerState.getPlayer() != null) {
-            updateInventoryDisplay(playerState.getPlayer());
-        }
-
-        // --- Layout do Crafting (Livro à esquerda) ---
-        // Vamos posicionar à esquerda do inventário principal
-        float craftingX = startX - 80f; // 80px à esquerda do início do inventário
-        float craftingY = invStartY + 100f; // Começa no topo
-
-        for (int i = 0; i < recipeIcons.size(); i++) {
-            Picture icon = recipeIcons.get(i);
-            BitmapText label = recipeLabels.get(i);
-
-            // Colocar um por baixo do outro
-            float y = craftingY - (i * 60f);
-
-            icon.setPosition(craftingX, y);
-
-            // Texto ao lado ou em cima
-            label.setLocalTranslation(craftingX + 50f, y + 30f, 1);
-
-            // Dica Visual: Podes mudar a cor do ícone se não tiver materiais
-            PlayerAppState pState = getState(PlayerAppState.class);
-            if (pState != null && pState.getPlayer() != null) {
-
-                Recipe r = craftingManager.getRecipes().get(i);
-
-                Material mat = icon.getMaterial();
-
-                if (mat != null) {
-                    if (pState.getPlayer().hasItem(r.inputId, r.inputCount)) {
-                        mat.setColor("Color", ColorRGBA.White); // Disponível
-                    } else {
-                        mat.setColor("Color", ColorRGBA.Gray); // Indisponível
-                    }
-                }
-            }
-        }
+    public void updateSelector(int slotIndex) {
+        this.currentSlotIndex = slotIndex;
+        refreshLayout();
     }
 
     private void centerCrosshair() {
@@ -436,183 +555,124 @@ public class HudAppState extends BaseAppState {
         crosshair.setLocalTranslation(x, y, 0);
     }
 
-    //Atualiza a imagem de cada coração (cheio/meio/vazio) consoante a vida atual
     public void setHealth(int currentHealth) {
-
-        //Proteção: Se a lista de corações ainda não foi criada, sai.
-        if (hearts.isEmpty()) {
-            return;
-        }
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < hearts.size(); i++) {
             Picture heart = hearts.get(i);
-            int heartValue = (i + 1) * 10;
-
-            if (currentHealth >= heartValue) {
-                heart.setTexture(assetManager, texHeartFull, true);
-            } else if (currentHealth >= heartValue - 5) {
-                heart.setTexture(assetManager, texHeartHalf, true);
-            } else {
-                heart.setTexture(assetManager, texHeartEmpty, true);
-            }
-        }
-    }
-
-    @Override
-    public void update(float tpf) {
-        // keep centered (cheap)
-        centerCrosshair();
-        refreshLayout();
-
-        // --- LÓGICA DE INVENTÁRIO UI ---
-        InputAppState input = getState(InputAppState.class);
-        PlayerAppState playerState = getState(PlayerAppState.class);
-
-        if (isInventoryVisible && input != null && playerState != null) {
-            Player player = playerState.getPlayer();
-
-            // 1. Atualizar posição do ícone do cursor (item arrastado)
-            Vector2f mousePos = getApplication().getInputManager().getCursorPosition();
-            updateCursorItemVisual(player, mousePos);
-
-            // 2. Verificar clique do rato
-            if (input.consumeUiClickRequested()) {
-                handleInventoryClick(mousePos, player);
-                handleCraftingClick(mousePos, playerState.getPlayer());
-            }
-        }
-
-    }
-
-    private void handleCraftingClick(Vector2f mousePos, Player player) {
-        List<Recipe> recipes = craftingManager.getRecipes(); // Obter lista atualizada
-
-        for (int i = 0; i < recipeIcons.size(); i++) {
-            Picture icon = recipeIcons.get(i);
-
-            if (isMouseOver(icon, mousePos)) {
-                // Se clicou, pedimos ao manager para tentar fazer o craft
-                Recipe r = recipes.get(i);
-
-                boolean success = craftingManager.craft(r, player); // <--- A MÁGICA ACONTECE AQUI
-
-                if (success) {
-                    // Opcional: Tocar som de sucesso ou atualizar UI imediato
-                    updateInventoryDisplay(player); // Forçar atualização visual
-                }
-                return;
-            }
-        }
-    }
-
-    private void updateCursorItemVisual(Player player, Vector2f mousePos) {
-        ItemStack cursorStack = player.getCursorItem();
-        if (cursorStack != null && cursorStack.getAmount() > 0) {
-            // Atualizar textura se mudou (simplificado)
+            int heartVal = (i + 1) * 10;
+            int halfVal = heartVal - 5;
             try {
-                cursorItemIcon.setImage(assetManager, "Textures/" + getTextureNameById(cursorStack.getId()), true);
-            } catch (Exception e) {
-            }
-
-            // Colocar na posição do rato (centrado)
-            cursorItemIcon.setPosition(mousePos.x - cursorItemIcon.getWidth() / 2, mousePos.y - cursorItemIcon.getHeight() / 2);
-            cursorItemIcon.setCullHint(Node.CullHint.Never); // Mostrar
-        } else {
-            cursorItemIcon.setCullHint(Node.CullHint.Always); // Esconder
+                if (currentHealth >= heartVal) heart.setImage(assetManager, "Interface/heart_full.png", true);
+                else if (currentHealth >= halfVal) heart.setImage(assetManager, "Interface/heart_half.png", true);
+                else heart.setImage(assetManager, "Interface/heart_empty.png", true);
+            } catch (Exception e) {}
         }
     }
 
-    private void handleInventoryClick(Vector2f mousePos, Player player) {
-        // Verificar clique na Hotbar
-        for (int i = 0; i < 9; i++) {
-            if (isMouseOver(hotbarSlots.get(i), mousePos)) {
-                clickSlot(player.getHotbar(), i, player);
-                return;
-            }
+    // --- LAYOUT ---
+
+    private void refreshLayout() {
+        SimpleApplication sapp = (SimpleApplication) getApplication();
+        float w = sapp.getCamera().getWidth();
+        float h = sapp.getCamera().getHeight();
+
+        float startX = (w / 2f) - (HOTBAR_WIDTH / 2f);
+        float hotbarY = 10f;
+
+        // 1. Hotbar
+        for (int i=0; i<9; i++) {
+            hotbarSlots.get(i).setPosition(startX + (i * (HOTBAR_WIDTH/9f)), hotbarY);
         }
+        selector.setPosition(startX + (currentSlotIndex * (HOTBAR_WIDTH/9f)), hotbarY);
 
-        // Verificar clique no Inventário Principal
-        for (int i = 0; i < mainInvSlots.size(); i++) {
-            if (isMouseOver(mainInvSlots.get(i), mousePos)) {
-                clickSlot(player.getMainInventory(), i, player);
-                return;
+        // 2. Corações
+        float heartsY = hotbarY + HOTBAR_HEIGHT + 10f;
+        for (int i=0; i<hearts.size(); i++) hearts.get(i).setPosition(startX + (i * (HEART_SIZE + 2f)), heartsY);
+
+        // 3. Inventário
+        float invStartY = heartsY + 50f;
+        if (isInventoryVisible) {
+            for (int i = 0; i < mainInvSlots.size(); i++) {
+                int row = i / 9; int col = i % 9;
+                float x = startX + (col * (HOTBAR_WIDTH/9f));
+                float y = invStartY + ((2 - row) * (HOTBAR_WIDTH/9f));
+                mainInvSlots.get(i).setPosition(x, y);
             }
-        }
-    }
 
-    private boolean isMouseOver(Picture pic, Vector2f mouse) {
-        float x = pic.getLocalTranslation().x;
-        float y = pic.getLocalTranslation().y;
-        float w = pic.getWidth();
-        float h = pic.getHeight();
-        return mouse.x >= x && mouse.x <= x + w && mouse.y >= y && mouse.y <= y + h;
-    }
+            // Crafting Básico (JOGADOR) - Só aparece se a mesa estiver fechada
+            boolean showPlayerRecipes = !isCraftingOpen;
 
-    private void clickSlot(ItemStack[] inventory, int index, Player player) {
-        ItemStack slotItem = inventory[index];
-        ItemStack handItem = player.getCursorItem();
+            float craftX = startX - 60f;
+            for (int i = 0; i < playerRecipeIcons.size(); i++) {
+                Picture icon = playerRecipeIcons.get(i);
 
-        // Lógica simples de troca/stack
-        if (handItem == null) {
-            // Mão vazia: pegar item do slot (se houver)
-            if (slotItem != null) {
-                player.setCursorItem(slotItem);
-                inventory[index] = null;
-            }
-        } else {
-            // Mão ocupada
-            if (slotItem == null) {
-                // Slot vazio: colocar item
-                inventory[index] = handItem;
-                player.setCursorItem(null);
-            } else {
-                // Slot ocupado
-                if (slotItem.getId() == handItem.getId()) {
-                    // Mesmo ID: Tentar juntar (stack)
-                    int space = ItemStack.MAX_STACK - slotItem.getAmount();
-                    if (space >= handItem.getAmount()) {
-                        slotItem.add(handItem.getAmount());
-                        player.setCursorItem(null);
-                    } else {
-                        slotItem.setAmount(ItemStack.MAX_STACK);
-                        handItem.add(-space); // Deixa o resto na mão
-                    }
+                if (showPlayerRecipes) {
+                    float y = invStartY + 100f - (i * 50f);
+                    icon.setPosition(craftX, y);
+                    icon.setCullHint(Node.CullHint.Never);
+                    BitmapText lbl = (BitmapText) icon.getUserData("label");
+                    if(lbl!=null) { lbl.setLocalTranslation(craftX+45f, y+25f, 1); lbl.setCullHint(Node.CullHint.Never); }
+
+                    updateRecipeColors(playerRecipes, playerRecipeIcons, getState(PlayerAppState.class).getPlayer());
                 } else {
-                    // IDs diferentes: Trocar
-                    inventory[index] = handItem;
-                    player.setCursorItem(slotItem);
+                    icon.setCullHint(Node.CullHint.Always);
+                    BitmapText lbl = (BitmapText) icon.getUserData("label");
+                    if(lbl!=null) lbl.setCullHint(Node.CullHint.Always);
                 }
             }
         }
+
+        // 4. Mesa de Crafting
+        if (isCraftingOpen) {
+            float cw = craftingBg.getWidth();
+            float ch = craftingBg.getHeight();
+            // Centrado na metade SUPERIOR do ecrã
+            float tx = (w / 2f) - (cw / 2f);
+            float ty = (h / 2f) - (ch / 2f) + 80f;
+
+            craftingTableNode.setLocalTranslation(tx, ty, 0);
+            craftingBg.setPosition(0, 0);
+
+            // A. Lista de Receitas (Lado Esquerdo da mesa)
+            float listX = 20f;
+            float listY = ch - 40f;
+            for (int i = 0; i < tableRecipeIcons.size(); i++) {
+                Picture icon = tableRecipeIcons.get(i);
+                float y = listY - (i * 50f);
+                icon.setPosition(listX, y);
+                BitmapText lbl = (BitmapText) icon.getUserData("label");
+                if(lbl!=null) lbl.setLocalTranslation(listX+45f, y+25f, 1);
+
+                updateRecipeColors(tableRecipes, tableRecipeIcons, getState(PlayerAppState.class).getPlayer());
+            }
+
+            // B. Grelha Visual (Centro da mesa)
+            float gridStartX = 120f; // Espaço para a lista à esquerda
+            float gridStartY = ch - 50f;
+            float gridSize = 30f;
+            float gap = 5f;
+
+            for (int i = 0; i < 9; i++) {
+                int r = i / 3;
+                int c = i % 3;
+                float gx = gridStartX + c * (gridSize + gap);
+                float gy = gridStartY - r * (gridSize + gap);
+                gridInputIcons.get(i).setPosition(gx, gy);
+            }
+
+            // C. Resultado (Lado Direito)
+            float resX = gridStartX + 3 * (gridSize + gap) + 30f;
+            float resY = gridStartY - (gridSize + gap);
+            resultIcon.setPosition(resX, resY);
+        }
     }
 
-
-    @Override
-    protected void cleanup(Application app) {
-        if (crosshair != null) crosshair.removeFromParent();
-
-        // Limpar tudo
+    @Override protected void cleanup(Application app) {
         if(crosshair != null) crosshair.removeFromParent();
         hotbarSlots.forEach(Picture::removeFromParent);
-        hotbarIcons.forEach(Picture::removeFromParent);
-        hotbarTexts.forEach(BitmapText::removeFromParent);
-
-        if (selector != null) selector.removeFromParent();
-
-        // Remover corações
-        for (Picture p : hearts) {
-            p.removeFromParent();
-        }
-        hearts.clear();
         inventoryNode.removeFromParent();
-        inventoryNode.detachAllChildren();
+        craftingTableNode.removeFromParent();
     }
 
-
-
-    @Override
-    protected void onEnable() { }
-
-    @Override
-    protected void onDisable() { }
+    @Override protected void onEnable() {}
+    @Override protected void onDisable() {}
 }
-

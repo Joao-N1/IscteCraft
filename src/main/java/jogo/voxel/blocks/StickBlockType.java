@@ -20,8 +20,6 @@ public class StickBlockType extends VoxelBlockType {
         return m;
     }
 
-    // ... construtor ...
-
     @Override
     public boolean isPlaceable() {
         return false; // Não deixa colocar no chão!
