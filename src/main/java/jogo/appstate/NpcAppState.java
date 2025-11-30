@@ -11,11 +11,7 @@ import jogo.engine.GameRegistry;
 import jogo.gameobject.GameObject;
 import jogo.gameobject.character.Player;
 import jogo.gameobject.character.Sheep;
-import com.jme3.asset.AssetManager;
-import com.jme3.scene.Geometry;
-import com.jme3.scene.shape.Sphere;
-import com.jme3.material.Material;
-import com.jme3.math.ColorRGBA;
+import com.jme3.bullet.collision.PhysicsRayTestResult;
 
 
 import java.util.HashMap;
@@ -98,7 +94,21 @@ public class NpcAppState extends BaseAppState {
             dir.y = 0; // Não voar, apenas andar no plano
 
             if (distance > 2.0f && distance < 20.0f) { // Segue se estiver perto (mas não colado)
-                dir.normalizeLocal().multLocal(3.0f); // Velocidade 3
+                // --- 3. AUTO-JUMP (NOVO) ---
+                // Lança um raio 1 metro à frente para detetar paredes
+                // Origem: cintura da ovelha (npcPos + 0.5 em Y)
+                Vector3f scanOrigin = npcPos.add(0, 0.5f, 0);
+                Vector3f scanTarget = scanOrigin.add(dir.mult(0.2f)); // 1m à frente
+
+                // Pergunta ao mundo físico se há algo à frente
+                var results = physicsSpace.rayTest(scanOrigin, scanTarget);
+
+                // Se houver obstáculo E a ovelha estiver no chão -> SALTA!
+                if (results.size() > 0 && control.isOnGround()) {
+                    control.jump();
+                }
+                // ---------------------------
+                dir.normalizeLocal().multLocal(1.7f); // Velocidade 3
                 control.setWalkDirection(dir);
                 control.setViewDirection(dir);
             } else {
