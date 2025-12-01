@@ -1,4 +1,3 @@
-// java
 package jogo.appstate;
 
 import com.jme3.app.Application;
@@ -9,10 +8,10 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import jogo.engine.GameRegistry;
 import jogo.gameobject.GameObject;
+import jogo.gameobject.character.Character;
 import jogo.gameobject.character.Player;
 import jogo.gameobject.character.Sheep;
-import com.jme3.bullet.collision.PhysicsRayTestResult;
-
+import jogo.gameobject.character.Zombie;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,9 +23,11 @@ public class NpcAppState extends BaseAppState {
     private final GameRegistry registry;
     private final PlayerAppState playerState;
 
-    // Guarda o controlo físico de cada ovelha
-    private final Map<Sheep, BetterCharacterControl> npcControls = new HashMap<>();
+    private final Map<Character, BetterCharacterControl> npcControls = new HashMap<>();
     private final Node npcPhysicsNode = new Node("NpcPhysics");
+
+    // Variável para o temporizador do GPS
+    private float gpsTimer = 0f;
 
     public NpcAppState(Node rootNode, PhysicsSpace physicsSpace, GameRegistry registry, PlayerAppState playerState) {
         this.rootNode = rootNode;
@@ -42,139 +43,121 @@ public class NpcAppState extends BaseAppState {
 
     @Override
     public void update(float tpf) {
-
         Player player = playerState.getPlayer();
         if (player == null) return;
 
-        // --- DEBUG: Localizador GPS (Podes apagar depois) ---
-        // Imprime a cada ~60 frames para não "entupir" a consola
-        if (System.currentTimeMillis() % 1000 < 20) {
-            Vector3f pPos = new Vector3f(
-                    player.getPosition().x,
-                    player.getPosition().y,
-                    player.getPosition().z
-            );
-            System.out.println(">>> GPS JOGADOR: " + pPos);
+        // --- SISTEMA DE GPS (A CADA 5 SEGUNDOS) ---
+        gpsTimer += tpf;
+        if (gpsTimer >= 5.0f) {
+            gpsTimer = 0f; // Reiniciar temporizador
 
-            for (Sheep s : npcControls.keySet()) {
-                System.out.println(">>> GPS OVELHA : " + s.getPosition().x + ", " + s.getPosition().y + ", " + s.getPosition().z);
+            System.out.println("\n===== GPS REPORT (" + String.format("%.2f", getApplication().getTimer().getTimeInSeconds()) + "s) =====");
+
+            // Posição do Jogador
+            var pPos = player.getPosition();
+            System.out.println("JOGADOR : X=" + String.format("%.1f", pPos.x) +
+                    " Y=" + String.format("%.1f", pPos.y) +
+                    " Z=" + String.format("%.1f", pPos.z));
+
+            // Posição de todos os NPCs (Ovelhas e Zombies)
+            if (npcControls.isEmpty()) {
+                System.out.println("NPCs    : Nenhum encontrado.");
+            } else {
+                for (Character npc : npcControls.keySet()) {
+                    var nPos = npc.getPosition();
+                    String nome = npc.getName();
+                    // Ajustar espaçamento para ficar bonito no log
+                    String padding = nome.length() < 7 ? " " : "";
+
+                    System.out.println(nome.toUpperCase() + padding + " : X=" + String.format("%.1f", nPos.x) +
+                            " Y=" + String.format("%.1f", nPos.y) +
+                            " Z=" + String.format("%.1f", nPos.z));
+                }
             }
+            System.out.println("=====================================");
         }
+        // ------------------------------------------
 
-        // 1. Verificar se há novas ovelhas no registo para criar física
+        // 1. Detetar NOVOS NPCs
         for (GameObject obj : registry.getAll()) {
-            if (obj instanceof Sheep sheep && !npcControls.containsKey(sheep)) {
-                createPhysicsFor(sheep);
+            if (obj instanceof Character npc && !(obj instanceof Player)) {
+                if (!npcControls.containsKey(npc)) {
+                    createPhysicsFor(npc);
+                }
             }
         }
 
-        // 2. Atualizar inteligência de cada ovelha
-        // Constrói Vector3f manualmente a partir do objecto de posição do Player
-        Vector3f playerPos = new Vector3f(
-                player.getPosition().x,
-                player.getPosition().y,
-                player.getPosition().z
-        );
+        // 2. Atualizar IA de TODOS os NPCs
+        var p = playerState.getPlayer().getPosition();
+        Vector3f playerPos = new Vector3f(p.x, p.y, p.z);
 
-        for (Map.Entry<Sheep, BetterCharacterControl> entry : npcControls.entrySet()) {
-            Sheep sheep = entry.getKey();
+        for (Map.Entry<Character, BetterCharacterControl> entry : npcControls.entrySet()) {
+            Character npc = entry.getKey();
             BetterCharacterControl control = entry.getValue();
 
-            // --- IA: Seguir Jogador ---
-            Vector3f npcPos;
-            if (control.getSpatial() != null) {
-                npcPos = control.getSpatial().getWorldTranslation();
-            } else {
-                // Spatial ainda não associado; usar posição zero temporária
-                npcPos = new Vector3f();
-            }
+            // Obter posição física atual
+            Vector3f npcPos = control.getSpatial().getWorldTranslation();
 
             Vector3f dir = playerPos.subtract(npcPos);
             float distance = dir.length();
-            dir.y = 0; // Não voar, apenas andar no plano
+            dir.y = 0;
 
-            if (distance > 2.0f && distance < 20.0f) { // Segue se estiver perto (mas não colado)
-                // --- 3. AUTO-JUMP (NOVO) ---
-                // Lança um raio 1 metro à frente para detetar paredes
-                // Origem: cintura da ovelha (npcPos + 0.5 em Y)
+            // Lógica de Seguir
+            if (distance > 1.5f && distance < 25.0f) {
+                dir.normalizeLocal();
+
+                // AUTO-JUMP
                 Vector3f scanOrigin = npcPos.add(0, 0.5f, 0);
-                Vector3f scanTarget = scanOrigin.add(dir.mult(0.2f)); // 1m à frente
-
-                // Pergunta ao mundo físico se há algo à frente
+                Vector3f scanTarget = scanOrigin.add(dir.mult(1.3f));
                 var results = physicsSpace.rayTest(scanOrigin, scanTarget);
 
-                // Se houver obstáculo E a ovelha estiver no chão -> SALTA!
                 if (results.size() > 0 && control.isOnGround()) {
                     control.jump();
                 }
-                // ---------------------------
-                dir.normalizeLocal().multLocal(1.7f); // Velocidade 3
-                control.setWalkDirection(dir);
+
+                // Velocidade
+                float speed = 1.8f;
+                if (npc instanceof Zombie) speed = 2.2f;
+
+                control.setWalkDirection(dir.mult(speed));
                 control.setViewDirection(dir);
+
             } else {
-                control.setWalkDirection(Vector3f.ZERO); // Parar
+                control.setWalkDirection(Vector3f.ZERO);
             }
 
-            // --- IMPORTANTE: Sincronizar Posição Lógica ---
-            // Atualizamos o objeto Sheep para o RenderAppState saber onde desenhar
-            sheep.setPosition(npcPos.x, npcPos.y, npcPos.z);
+            // Sincronizar Posição Lógica
+            npc.setPosition(npcPos.x, npcPos.y, npcPos.z);
         }
     }
 
-    private void createPhysicsFor(Sheep sheep) {
-        System.out.println("--- DEBUG NPC ---");
-        System.out.println("Nome: " + sheep.getName());
-        System.out.println("Posição Lógica (Antes da Física): " + sheep.getPosition().x + ", " + sheep.getPosition().y + ", " + sheep.getPosition().z);
-
-        // Evitar duplicados por segurança
-        if (npcControls.containsKey(sheep)) {
-            System.out.println("createPhysicsFor: control já existe para " + sheep.getName());
-            return;
-        }
+    private void createPhysicsFor(Character npc) {
+        // (Este método mantém-se igual ao que tinhas, com a correção da altura)
+        System.out.println("Criando física para NPC: " + npc.getName());
 
         float radius = 0.4f;
-        float desiredHeight = 1.0f; // deve ser maior que 2 * radius (0.8f)
-        float minHeight = 2f * radius + 0.01f;
-        float height = Math.max(desiredHeight, minHeight);
-
-        System.out.println(String.format("Criando BetterCharacterControl para %s — radius=%.3f, height=%.3f (mínimo=%.3f)",
-                sheep.getName(), radius, height, minHeight));
-
-
-        // Criar corpo físico
-        BetterCharacterControl control;
-        try {
-            control = new BetterCharacterControl(radius, height, 30f);
-        } catch (IllegalArgumentException e) {
-            // fallback seguro: ajusta height e tenta outra vez
-            height = minHeight;
-            System.out.println("Fallback: ajustando height para " + height + " devido a: " + e.getMessage());
-            control = new BetterCharacterControl(radius, height, 30f);
+        float height = 0.9f; // Altura corrigida para evitar crash
+        if (npc instanceof Zombie) {
+            height = 1.8f;
         }
+
+        BetterCharacterControl control = new BetterCharacterControl(radius, height, 30f);
         control.setGravity(new Vector3f(0, -20f, 0));
 
-        // Adicionar o controlo ao Node
-        Node node = new Node(sheep.getName() + "_Phys");
+        Node node = new Node(npc.getName() + "_Phys");
         node.addControl(control);
         npcPhysicsNode.attachChild(node);
 
-        // IMPORTANTE: Adicionar ao PhysicsSpace ANTES de fazer warp
         physicsSpace.add(control);
+        control.warp(new Vector3f(npc.getPosition().x, npc.getPosition().y, npc.getPosition().z));
 
-        // Agora sim, forçar a posição
-        control.warp(new Vector3f(sheep.getPosition().x, sheep.getPosition().y, sheep.getPosition().z));
-
-        npcControls.put(sheep, control);
-        System.out.println("Física criada e Warped!");
-        System.out.println("-----------------");
+        npcControls.put(npc, control);
     }
 
     @Override
     protected void cleanup(Application app) {
         npcPhysicsNode.removeFromParent();
-        for (BetterCharacterControl c : npcControls.values()) {
-            physicsSpace.remove(c);
-        }
+        for (BetterCharacterControl c : npcControls.values()) physicsSpace.remove(c);
         npcControls.clear();
     }
 

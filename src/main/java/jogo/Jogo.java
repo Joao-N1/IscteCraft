@@ -80,7 +80,13 @@ public class Jogo extends SimpleApplication {
         ovelha.setPosition(28.5f, 25f, 26.5f);
         registry.add(ovelha);
         // -----------------------------------------
+        // ... (código da ovelha) ...
 
+        // --- Criar Zombie ---
+        jogo.gameobject.character.Zombie zombie = new jogo.gameobject.character.Zombie();
+        zombie.setPosition(160, 25, 160); // Nasce noutro lado
+        registry.add(zombie);
+        // --------------------
         // ... (resto do código: Post-processing, HUD) ...
 
 

@@ -117,7 +117,29 @@ public class RenderAppState extends BaseAppState {
             // --- REMOVI A CAIXA DE DEBUG VERMELHA DAQUI ---
 
             return sheepNode;
+
+        } else if (obj instanceof jogo.gameobject.character.Zombie) {
+        Node zombieNode = new Node("ZombieVisual");
+        try {
+            // Caminho indicado por ti:
+            Spatial model = assetManager.loadModel("Models/zombieNPC/source/model.gltf");
+            model.setName(obj.getName());
+
+            // Ajusta a escala conforme necessário (começa com 0.4f tal como a ovelha ou maior)
+            model.setLocalScale(1.0f);
+
+            zombieNode.attachChild(model);
+        } catch (Exception e) {
+            System.out.println("Erro ao carregar Zombie: " + e.getMessage());
+            // Fallback: Caixa Verde
+            Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.9f, 0.4f));
+            g.setMaterial(colored(ColorRGBA.Green));
+            zombieNode.attachChild(g);
         }
+        return zombieNode;
+    }
+
+    // ...
 
         return null;
     }
