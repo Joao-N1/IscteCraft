@@ -137,7 +137,28 @@ public class RenderAppState extends BaseAppState {
             zombieNode.attachChild(g);
         }
         return zombieNode;
-    }
+        } else if (obj instanceof jogo.gameobject.character.Wolf) {
+            Node wolfNode = new Node("WolfVisual");
+            try {
+                // Caminho indicado por ti (confirma se a pasta é 'wolfNPC' ou 'WolfNPC')
+                Spatial model = assetManager.loadModel("Models/wolfNPC/wolf.gltf");
+                model.setName(obj.getName());
+
+                // Ajuste de escala (ajusta se ele aparecer gigante)
+                model.setLocalScale(0.075f);
+
+                model.setLocalTranslation(0, 0.6f, 0);
+
+                wolfNode.attachChild(model);
+            } catch (Exception e) {
+                System.out.println("Erro ao carregar Lobo: " + e.getMessage());
+                // Fallback: Caixa Cinzenta
+                Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.4f, 0.8f));
+                g.setMaterial(colored(ColorRGBA.Gray));
+                wolfNode.attachChild(g);
+            }
+            return wolfNode;
+        }
 
     // ...
 

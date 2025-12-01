@@ -12,6 +12,7 @@ import jogo.gameobject.character.Character;
 import jogo.gameobject.character.Player;
 import jogo.gameobject.character.Sheep;
 import jogo.gameobject.character.Zombie;
+import jogo.gameobject.character.Wolf;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -111,13 +112,14 @@ public class NpcAppState extends BaseAppState {
                 Vector3f scanTarget = scanOrigin.add(dir.mult(1.3f));
                 var results = physicsSpace.rayTest(scanOrigin, scanTarget);
 
-                if (results.size() > 0 && control.isOnGround()) {
+                if (results.size() > 0 && control.isOnGround() && distance > 3.0f) {
                     control.jump();
                 }
 
                 // Velocidade
                 float speed = 1.8f;
                 if (npc instanceof Zombie) speed = 2.2f;
+                if (npc instanceof Wolf) speed = 3.5f;
 
                 control.setWalkDirection(dir.mult(speed));
                 control.setViewDirection(dir);
@@ -140,6 +142,7 @@ public class NpcAppState extends BaseAppState {
         if (npc instanceof Zombie) {
             height = 1.8f;
         }
+
 
         BetterCharacterControl control = new BetterCharacterControl(radius, height, 30f);
         control.setGravity(new Vector3f(0, -20f, 0));

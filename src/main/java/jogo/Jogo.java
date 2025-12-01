@@ -89,6 +89,12 @@ public class Jogo extends SimpleApplication {
         // --------------------
         // ... (resto do código: Post-processing, HUD) ...
 
+        // ... (outros spawns) ...
+
+        // --- Criar Lobo ---
+        jogo.gameobject.character.Wolf lobo = new jogo.gameobject.character.Wolf();
+        lobo.setPosition(5, 25, 5);
+        registry.add(lobo);
 
         // Post-processing: SSAO for subtle contact shadows
         try {
