@@ -2,18 +2,21 @@ package jogo.appstate;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
+import com.jme3.asset.AssetManager;
+import com.jme3.audio.AudioData;
+import com.jme3.audio.AudioNode;
+import com.jme3.collision.CollisionResults;
 import com.jme3.math.Ray;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
-import com.jme3.collision.CollisionResults;
 import jogo.engine.RenderIndex;
 import jogo.gameobject.GameObject;
+import jogo.gameobject.character.Trader;
 import jogo.gameobject.item.Item;
+import jogo.voxel.VoxelBlockType;
 import jogo.voxel.VoxelWorld;
-import jogo.util.Hit;
-import jogo.framework.math.Vec3;
 
 public class InteractionAppState extends BaseAppState {
 
@@ -23,6 +26,9 @@ public class InteractionAppState extends BaseAppState {
     private final RenderIndex renderIndex;
     private final WorldAppState world;
     private float reach = 5.5f;
+
+    // Cooldown de ataque
+    private float playerAttackCooldown = 0f;
 
     public InteractionAppState(Node rootNode, Camera cam, InputAppState input, RenderIndex renderIndex, WorldAppState world) {
         this.rootNode = rootNode;
@@ -39,116 +45,112 @@ public class InteractionAppState extends BaseAppState {
     public void update(float tpf) {
         if (!input.isMouseCaptured()) return;
 
+        if (playerAttackCooldown > 0) playerAttackCooldown -= tpf;
+
         Vector3f origin = cam.getLocation();
         Vector3f dir = cam.getDirection().normalize();
 
+        // --- 1. ATAQUE (Botão Esquerdo) ---
+        if (input.isBreaking() && playerAttackCooldown <= 0) {
+            CollisionResults results = new CollisionResults();
+            Ray ray = new Ray(origin, dir);
+            ray.setLimit(4.0f);
+            rootNode.collideWith(ray, results);
+
+            if (results.size() > 0) {
+                Spatial target = results.getClosestCollision().getGeometry();
+                GameObject obj = findRegistered(target);
+
+                if (obj instanceof jogo.gameobject.character.Character npc && !(obj instanceof jogo.gameobject.character.Player)) {
+                    if (!npc.isDead()) {
+                        npc.takeDamage(5);
+                        playerAttackCooldown = 0.5f;
+
+                        // Tocar som de dano (baseado no animal)
+                        playNpcHurtSound(npc);
+
+                        System.out.println("Atacaste " + npc.getName() + "!");
+                        return;
+                    }
+                }
+            }
+        }
+
+        // --- 2. INTERAGIR (Tecla E) ---
         if (input.consumeInteractRequested()) {
             Ray ray = new Ray(origin, dir);
             ray.setLimit(reach);
             CollisionResults results = new CollisionResults();
             rootNode.collideWith(ray, results);
+
             if (results.size() > 0) {
                 Spatial hit = results.getClosestCollision().getGeometry();
                 GameObject obj = findRegistered(hit);
+
+                // A. Interagir com Item
                 if (obj instanceof Item item) {
                     item.onInteract();
-                    System.out.println("Interacted with item: " + obj.getName());
+                    return;
+                }
+
+                // B. Interagir com Trader
+                if (obj instanceof Trader) {
+                    // --- ALTERAÇÃO: Som de Falar ---
+                    playSound("Sounds/TraderTalking.wav");
+                    // -------------------------------
+
+                    jogo.appstate.HudAppState hud = getState(jogo.appstate.HudAppState.class);
+                    if (hud != null) {
+                        hud.showSubtitle("Trader: 'Bem vindo ao IscteCraft! explora o que o mundo tem para oferecer e aguarda atualizacoes :) .'", 4.0f);
+                    }
                     return;
                 }
             }
 
-            // Se não for item, verifica se é um bloco (para interagir, não colocar)
+            // C. Interagir com Blocos
             VoxelWorld vw = world != null ? world.getVoxelWorld() : null;
             if (vw != null) {
                 vw.pickFirstSolid(cam, reach).ifPresent(hit -> {
                     VoxelWorld.Vector3i cell = hit.cell;
-                    System.out.println("TODO: interact with voxel at " + cell.x + "," + cell.y + "," + cell.z);
                     byte blockId = vw.getBlock(cell.x, cell.y, cell.z);
 
-                    // --- DEBUG: DIZ-NOS O QUE CLICÁSTE ---
-                    System.out.println("CLIQUEI NO BLOCO ID: " + blockId);
-                    System.out.println("O ID DA MESA É: " + jogo.voxel.VoxelPalette.CRAFTING_TABLE_ID);
-                    // -------------------------------------
-
                     if (blockId == jogo.voxel.VoxelPalette.CRAFTING_TABLE_ID) {
-                        System.out.println("-> ABRINDO A MESA!"); // Debug
                         input.setMouseCaptured(false);
                         jogo.appstate.HudAppState hud = getState(jogo.appstate.HudAppState.class);
                         if (hud != null) hud.openCraftingTable();
-                    } else {
-                        System.out.println("-> Isto não é uma mesa."); // Debug
                     }
                 });
             }
-        };
+        }
 
-
-
-
-        // --- NOVA LÓGICA: COLOCAR BLOCO (Botão Direito) ---
+        // --- 3. COLOCAR BLOCO (Botão Direito) ---
         if (input.consumeUseRequested()) {
-            // 1. Verificar se temos bloco na mão
             PlayerAppState playerState = getState(PlayerAppState.class);
             if (playerState == null) return;
 
             byte heldId = playerState.getPlayer().getHeldItem();
-            System.out.println("DEBUG: Tentativa de colocar. Item na mão ID: " + heldId);
-            if (heldId == 0) return; // Mão vazia
+            if (heldId == 0) return;
 
-            VoxelWorld placeVw = world != null ? world.getVoxelWorld() : null;
-            // --- NOVA VERIFICAÇÃO ---
             VoxelWorld vw = world.getVoxelWorld();
-            var type = placeVw != null ? placeVw.getPalette().get(heldId) : null;
-            if (type == null) {
-                System.out.println("Tipo de bloco desconhecido: " + heldId);
-                return;
-            }
+            VoxelBlockType type = vw.getPalette().get(heldId);
 
-            if (!type.isPlaceable()) {
-                System.out.println("Não podes colocar este item!");
-                return; // Sai da função, não coloca nada
-            }
-            // ------------------------
-            if (placeVw != null) {
-                // Raycast para encontrar onde colocar
-                placeVw.pickFirstSolid(cam, reach).ifPresent(hit -> {
-                    // A "célula" é o bloco em que batemos.
-                    // A "normal" diz-nos qual a face (ex: 0,1,0 é Cima).
-                    // Somamos a normal à célula para obter o vizinho vazio.
-                    int x = hit.cell.x + (int) hit.normal.x;
-                    int y = hit.cell.y + (int) hit.normal.y;
-                    int z = hit.cell.z + (int) hit.normal.z;
+            if (!type.isPlaceable()) return;
 
-                    // Verifica se não estamos a colocar o bloco dentro do próprio jogador!
+            if (vw != null) {
+                vw.pickFirstSolid(cam, reach).ifPresent(hit -> {
+                    int x = hit.cell.x + (int)hit.normal.x;
+                    int y = hit.cell.y + (int)hit.normal.y;
+                    int z = hit.cell.z + (int)hit.normal.z;
 
-                    // Se não tiveres o método toVector3f, usa:
                     jogo.framework.math.Vec3 pPos = playerState.getPlayer().getPosition();
                     Vector3f playerPos = new Vector3f(pPos.x, pPos.y, pPos.z);
-
                     Vector3f playerCenter = playerPos.add(0, 0.9f, 0);
 
-                    // Definir a caixa do jogador (Raio ~0.4, Altura ~1.8 -> Meia-altura ~0.9)
-                    // Assumindo que a posição é o centro do corpo (cintura)
-                    com.jme3.bounding.BoundingBox playerBox = new com.jme3.bounding.BoundingBox(
-                            playerPos,          // Centro
-                            0.48f, 0.9f, 0.48f);  // Raio X, Meia-Altura Y, Raio Z
-
-                    /// 4. Criar a caixa do BLOCO NOVO
+                    com.jme3.bounding.BoundingBox playerBox = new com.jme3.bounding.BoundingBox(playerCenter, 0.48f, 0.9f, 0.48f);
                     Vector3f blockCenter = new Vector3f(x + 0.5f, y + 0.5f, z + 0.5f);
-                    // Usamos 0.49f em vez de 0.5f para evitar que toque nos blocos vizinhos
-                    com.jme3.bounding.BoundingBox blockBox = new com.jme3.bounding.BoundingBox(
-                            blockCenter,
-                            0.49f, 0.49f, 0.49f);
+                    com.jme3.bounding.BoundingBox blockBox = new com.jme3.bounding.BoundingBox(blockCenter, 0.49f, 0.49f, 0.49f);
 
-                    System.out.println("DEBUG: Player Box: " + playerBox);
-                    System.out.println("DEBUG: Block Box: " + blockBox);
-
-                    // Se as caixas se tocarem, NÃO colocar bloco
-                    if (playerBox.intersects(blockBox)) {
-                        System.out.println("Não podes colocar blocos dentro do jogador!");
-                        return;
-                    }
-                    System.out.println("SUCESSO: A colocar bloco em " + x + "," + y + "," + z);
+                    if (playerBox.intersects(blockBox)) return;
 
                     vw.setBlock(x, y, z, heldId);
                     vw.rebuildDirtyChunks(world.getPhysicsSpace());
@@ -157,6 +159,39 @@ public class InteractionAppState extends BaseAppState {
                 });
             }
         }
+    }
+
+    // --- MÉTODOS DE SOM ---
+
+    // Método genérico para tocar qualquer ficheiro
+    private void playSound(String soundFile) {
+        if (soundFile == null || soundFile.isEmpty()) return;
+
+        AssetManager am = getApplication().getAssetManager();
+        try {
+            AudioNode audio = new AudioNode(am, soundFile, AudioData.DataType.Buffer);
+            audio.setPositional(false);
+            audio.setVolume(1.5f);
+            audio.setLooping(false);
+            audio.playInstance();
+        } catch (Exception e) {
+            System.out.println("Som não encontrado: " + soundFile);
+        }
+    }
+
+    // Método específico para escolher o som de dano
+    private void playNpcHurtSound(jogo.gameobject.character.Character npc) {
+        String soundFile = "";
+        if (npc instanceof jogo.gameobject.character.Sheep) {
+            soundFile = "Sounds/Sheep.wav";
+        } else if (npc instanceof jogo.gameobject.character.Wolf) {
+            soundFile = "Sounds/Wolf.wav";
+        } else if (npc instanceof jogo.gameobject.character.Zombie) {
+            soundFile = "Sounds/Zombie.wav";
+        } else if (npc instanceof Trader) {
+            soundFile = "Sounds/Trader.wav"; // Som de dano (diferente do de falar)
+        }
+        playSound(soundFile);
     }
 
     private GameObject findRegistered(Spatial s) {
@@ -169,12 +204,7 @@ public class InteractionAppState extends BaseAppState {
         return null;
     }
 
-    @Override
-    protected void cleanup(Application app) { }
-
-    @Override
-    protected void onEnable() { }
-
-    @Override
-    protected void onDisable() { }
+    @Override protected void cleanup(Application app) { }
+    @Override protected void onEnable() { }
+    @Override protected void onDisable() { }
 }

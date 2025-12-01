@@ -17,7 +17,6 @@ import jogo.voxel.VoxelWorld;
 import com.jme3.audio.AudioNode;
 import com.jme3.audio.AudioData;
 
-
 public class PlayerAppState extends BaseAppState {
 
     private final Node rootNode;
@@ -66,7 +65,6 @@ public class PlayerAppState extends BaseAppState {
         this.physicsSpace = physicsSpace;
         this.world = world;
         world.registerPlayerAppState(this);
-
     }
 
     @Override
@@ -95,12 +93,11 @@ public class PlayerAppState extends BaseAppState {
         playerLight.setRadius(12f);
         rootNode.addLight(playerLight);
 
-
         // --- Configuração do Som de Dano ---
         audioHurt = new AudioNode(assetManager, "Sounds/Hurt_Sound_Effect.wav", AudioData.DataType.Buffer);
-        audioHurt.setPositional(false); // false = som ambiente/2D (ouve-se sempre no volume máximo)
-        audioHurt.setLooping(false);    // Não repetir
-        audioHurt.setVolume(3.0f);      // Ajusta o volume se necessário (2.0 é bem alto)
+        audioHurt.setPositional(false);
+        audioHurt.setLooping(false);
+        audioHurt.setVolume(3.0f);
         playerNode.attachChild(audioHurt);
 
         // Spawn at recommended location
@@ -108,16 +105,16 @@ public class PlayerAppState extends BaseAppState {
 
         // initialize camera
         cam.setFrustumPerspective(60f, (float) cam.getWidth() / cam.getHeight(), 0.05f, 500f);
-        // Look slightly downward so ground is visible immediately
         this.pitch = -0.35f;
         applyViewToCamera();
-
 
         // Obter referência para o HUD para atualizar a vida
         hud = getState(HudAppState.class);
 
-        // Assegurar que o player começa com vida cheia
-        if(player != null) player.setHealth(100);
+        // CORREÇÃO 1: Usar setMaxHealth em vez de setHealth
+        if(player != null) {
+            player.setMaxHealth(100); // Isto define Max e Current para 100
+        }
         updateHud();
     }
 
@@ -125,53 +122,41 @@ public class PlayerAppState extends BaseAppState {
     public void update(float tpf) {
         // respawn on request
         if (input.consumeRespawnRequested()) {
-            // refresh spawn from world in case terrain changed
             if (world != null) spawnPosition = world.getRecommendedSpawnPosition();
             respawn();
-
         }
+
+        // Sincronizar Posição
         if (playerNode != null && player != null) {
             Vector3f physPos = playerNode.getWorldTranslation();
             player.setPosition(physPos.x, physPos.y, physPos.z);
         }
 
-        // 1. Verificar se o jogador quer abrir/fechar inventário ('I')
+        // 1. Verificar Inventário ('I')
         if (input.consumeInventoryRequest()) {
             inventoryOpen = !inventoryOpen;
-
-            // Atualizar HUD
             if (hud != null) hud.setInventoryVisible(inventoryOpen);
-
-            // Atualizar Rato:
-            // Se inventário aberto -> Rato Solto (false no captured) para clicar
-            // Se inventário fechado -> Rato Preso (true no captured) para olhar
             input.setMouseCaptured(!inventoryOpen);
         }
 
-        // 2. Verificar input da Hotbar (Teclas 1-9)
-        // Só permitimos mudar a hotbar se o inventário estiver FECHADO (opcional)
-        // Mas geralmente em jogos podes mudar a seleção mesmo com ele aberto.
+        // 2. Verificar Hotbar (1-9)
         int requestedSlot = input.consumeHotbarRequest();
         if (requestedSlot != -1) {
-            System.out.println("Mudar para slot: " + requestedSlot);
             player.setSelectedSlot(requestedSlot);
-
-            // Avisar o HUD para mover o quadrado
             if (hud != null) {
                 hud.updateSelector(player.getSelectedSlot());
             }
         }
 
-        // pause controls if mouse not captured
+        // Pause controls if mouse not captured
         if (!input.isMouseCaptured()) {
             characterControl.setWalkDirection(Vector3f.ZERO);
-            // keep light with player even when paused
             if (playerLight != null) playerLight.setPosition(playerNode.getWorldTranslation().add(0, eyeHeight, 0));
             applyViewToCamera();
             return;
         }
 
-        // handle mouse look
+        // Mouse Look
         Vector2f md = input.consumeMouseDelta();
         if (md.lengthSquared() != 0f) {
             float degX = md.x * mouseSensitivity;
@@ -181,7 +166,7 @@ public class PlayerAppState extends BaseAppState {
             pitch = FastMath.clamp(pitch, -FastMath.HALF_PI * 0.99f, FastMath.HALF_PI * 0.99f);
         }
 
-        // movement input in XZ plane based on camera yaw
+        // Movement
         Vector3f wish = input.getMovementXZ();
         Vector3f dir = Vector3f.ZERO;
         if (wish.lengthSquared() > 0f) {
@@ -195,19 +180,16 @@ public class PlayerAppState extends BaseAppState {
             characterControl.jump();
         }
 
-        // place camera at eye height above physics location
+        // Camera & Light
         applyViewToCamera();
-
-        // update light to follow head
         if (playerLight != null) playerLight.setPosition(playerNode.getWorldTranslation().add(0, eyeHeight, 0));
 
-        // --- LÓGICA DE DANO AMBIENTAL ---
+        // Dano Ambiental
         checkEnvironmentalDamage(tpf);
     }
 
-    //Verifica os blocos à volta do jogador (pés e cabeça) para ver se leva dano
+    // --- DANO AMBIENTAL ---
     private void checkEnvironmentalDamage(float tpf) {
-        // Se estiver em cooldown (invulnerável), reduz o timer e sai
         if (damageCooldown > 0) {
             damageCooldown -= tpf;
             return;
@@ -217,53 +199,35 @@ public class PlayerAppState extends BaseAppState {
         VoxelWorld voxelWorld = world.getVoxelWorld();
         if (voxelWorld == null) return;
 
-        // Posição do jogador
         Vector3f pos = playerNode.getWorldTranslation();
-        // Verificar uma pequena área à volta do jogador (bounding box simples)
-        // O jogador tem ~0.8 de largura e 1.8 de altura. Vamos verificar blocos que ele possa estar a tocar.
-        // Convertemos coordenadas do mundo para coordenadas inteiras (voxels)
 
         int minX = (int) Math.floor(pos.x - 0.5f);
         int maxX = (int) Math.floor(pos.x + 0.5f);
         int minZ = (int) Math.floor(pos.z - 0.5f);
         int maxZ = (int) Math.floor(pos.z + 0.5f);
 
-        // Verifica nos pés (y) e no tronco (y+1)
         int feetY = (int) Math.floor(pos.y);
         int headY = (int) Math.floor(pos.y + 1f);
-        int belowY = feetY - 1;                    // Bloco debaixo dos pés
-        int aboveY = headY + 1;                    // Bloco acima da cabeça
-
+        int belowY = feetY - 1;
+        int aboveY = headY + 1;
 
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
-
-                // Verifica Pés
-                if (checkBlockDamage(voxelWorld, x, feetY, z)) {
-                    return; // <--- PARAR IMEDIATAMENTE se levou dano
-                }
-                // Verifica Cabeça
-                if (checkBlockDamage(voxelWorld, x, headY, z)) {
-                    return; // <--- PARAR IMEDIATAMENTE se levou dano
-                }
-                // 2. Verifica chão (Pisar em cima)
-                if (checkBlockDamage(voxelWorld, x, belowY, z))
-                    return;
-
-                // 3. Verifica teto (Bater com a cabeça)
-                if (checkBlockDamage(voxelWorld, x, aboveY, z))
-                    return;
+                if (checkBlockDamage(voxelWorld, x, feetY, z)) return;
+                if (checkBlockDamage(voxelWorld, x, headY, z)) return;
+                if (checkBlockDamage(voxelWorld, x, belowY, z)) return;
+                if (checkBlockDamage(voxelWorld, x, aboveY, z)) return;
             }
         }
     }
 
-    //Vê se um bloco específico numa coordenada tem dano de contacto
     private boolean checkBlockDamage(VoxelWorld vw, int x, int y, int z) {
         byte id = vw.getBlock(x, y, z);
         if (id == VoxelPalette.AIR_ID) return false;
 
-        var blockType = vw.getPalette().get(id);
-        int damage = blockType.getContactDamage();
+
+        // Agora vai buscar o dano real (ex: 10 na SpikyWood, 0 na Terra)
+        int damage = vw.getPalette().get(id).getContactDamage();
 
         if (damage > 0) {
             takeDamage(damage);
@@ -272,35 +236,27 @@ public class PlayerAppState extends BaseAppState {
         return false;
     }
 
-    //Retira vida, ativa invencibilidade temporária e verifica se morreu
-    public void takeDamage(int amount) {
-        if (damageCooldown > 0) return; // Segurança extra
+    // --- SISTEMA DE DANO ---
 
-        //Tocar o som
+    public void takeDamage(int amount) {
+        if (damageCooldown > 0) return;
+
         if (audioHurt != null) {
             audioHurt.playInstance();
         }
 
-        int currentHealth = player.getHealth();
-        currentHealth -= amount;
-        player.setHealth(currentHealth);
+        // CORREÇÃO 2: Usar o método da classe Character
+        player.takeDamage(amount);
 
-        System.out.println("Dano: " + amount + ". Vida atual: " + currentHealth);
+        System.out.println("Dano: " + amount + ". Vida atual: " + player.getHealth());
 
-        // Atualiza o HUD
         updateHud();
 
-        // Verifica Morte
-        if (currentHealth <= 0) {
+        if (player.isDead()) {
             System.out.println("Jogador morreu!");
             respawn();
-            // O respawn() está definido abaixo, vamos garantir que reseta a vida
         } else {
-            // Ativa invencibilidade temporária
             damageCooldown = INVULNERABILITY_TIME;
-
-            // Opcional: Efeito visual de "empurrão" (Knockback)
-            // characterControl.applyCentralImpulse(...) // Requer ajustes na física
         }
     }
 
@@ -314,33 +270,28 @@ public class PlayerAppState extends BaseAppState {
         characterControl.setWalkDirection(Vector3f.ZERO);
         characterControl.warp(spawnPosition);
 
-        //Reseta a vida do jogador
+        // CORREÇÃO 3: Usar o método respawn do Character
         if (player != null) {
-            player.setHealth(100);
+            player.respawn();
         }
 
-        //invencibilidade ao dar respawn
+        damageCooldown = RESPAWN_PROTECTION_TIME;
+        updateHud();
         damageCooldown = RESPAWN_PROTECTION_TIME;
 
-        updateHud(); // Atualiza HUD para cheio
-        damageCooldown = 0f; // Remove cooldown se houver
-
-        // Reset look
         this.pitch = -0.35f;
         applyViewToCamera();
     }
 
     private Vector3f computeWorldMove(Vector3f inputXZ) {
-        // Build forward and left unit vectors from yaw
         float sinY = FastMath.sin(yaw);
         float cosY = FastMath.cos(yaw);
-        Vector3f forward = new Vector3f(-sinY, 0, -cosY); // -Z when yaw=0
-        Vector3f left = new Vector3f(-cosY, 0, sinY);     // -X when yaw=0
+        Vector3f forward = new Vector3f(-sinY, 0, -cosY);
+        Vector3f left = new Vector3f(-cosY, 0, sinY);
         return left.mult(inputXZ.x).addLocal(forward.mult(inputXZ.z));
     }
 
     private void applyViewToCamera() {
-        // Character world location (spatial is synced by control)
         Vector3f loc = playerNode.getWorldTranslation().add(0, eyeHeight, 0);
         cam.setLocation(loc);
         cam.setRotation(new com.jme3.math.Quaternion().fromAngles(pitch, yaw, 0f));
@@ -374,5 +325,10 @@ public class PlayerAppState extends BaseAppState {
             physicsSpace.remove(characterControl);
             physicsSpace.add(characterControl);
         }
+    }
+
+    // Por defeito, os blocos não dão dano (retornam 0)
+    public int getContactDamage() {
+        return 0;
     }
 }
