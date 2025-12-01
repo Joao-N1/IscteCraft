@@ -77,7 +77,7 @@ public class Jogo extends SimpleApplication {
         // --- NOVO: Spawnar uma Ovelha de Teste ---
         jogo.gameobject.character.Sheep ovelha = new jogo.gameobject.character.Sheep();
         // Colocar perto do spawn do jogador
-        ovelha.setPosition(28.5f, 25f, 26.5f);
+        ovelha.setPosition(80.0f, 25f, 80.0f);
         registry.add(ovelha);
         // -----------------------------------------
         // ... (código da ovelha) ...

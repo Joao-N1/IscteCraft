@@ -130,7 +130,7 @@ public class VoxelWorld {
         int WATER_WIDTH = 10;
 
         // Nível da Água = Nível mais baixo do terreno
-        int WATER_LEVEL = 18;
+        int WATER_LEVEL = 16;
         // -----------------------
 
         int centerX = sizeX / 2;

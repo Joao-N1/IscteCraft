@@ -66,9 +66,37 @@ public class HudAppState extends BaseAppState {
     private final float HOTBAR_HEIGHT = 44f;
     private final float HEART_SIZE = 20f;
 
+    // --- NOVO: LEGENDAS (SUBTITLES) ---
+    private BitmapText subtitleText;
+    private float subtitleTimer = 0f;
+    // ----------------------------------
+
     public HudAppState(Node guiNode, AssetManager assetManager) {
         this.guiNode = guiNode;
         this.assetManager = assetManager;
+    }
+
+    /**
+     * Mostra um texto no ecrã por X segundos.
+     */
+    public void showSubtitle(String text, float duration) {
+        if (subtitleText != null) {
+            subtitleText.setText(text);
+            subtitleTimer = duration;
+            centerSubtitle(); // Recalcular posição para ficar centrado
+        }
+    }
+
+    private void centerSubtitle() {
+        SimpleApplication sapp = (SimpleApplication) getApplication();
+        float w = sapp.getCamera().getWidth();
+        float h = sapp.getCamera().getHeight();
+
+        float textWidth = subtitleText.getLineWidth();
+        float x = (w - textWidth) / 2f;
+        float y = h * 0.75f; // Posição: 75% da altura do ecrã
+
+        subtitleText.setLocalTranslation(x, y, 0);
     }
 
     @Override
@@ -89,6 +117,14 @@ public class HudAppState extends BaseAppState {
 
         // 3. Inicializar Crafting (Jogador e Mesa)
         initCraftingSystems();
+
+        // --- 4. INICIALIZAR LEGENDAS ---
+        subtitleText = new BitmapText(guiFont, false);
+        subtitleText.setSize(guiFont.getCharSet().getRenderedSize() * 1.2f);
+        subtitleText.setColor(ColorRGBA.Yellow);
+        subtitleText.setText("");
+        guiNode.attachChild(subtitleText);
+        // -------------------------------
 
         refreshLayout();
         System.out.println("HudAppState initialized.");
@@ -263,6 +299,14 @@ public class HudAppState extends BaseAppState {
     public void update(float tpf) {
         centerCrosshair();
         refreshLayout();
+
+        // --- LÓGICA DE TEMPO DA LEGENDA ---
+        if (subtitleTimer > 0) {
+            subtitleTimer -= tpf;
+            if (subtitleTimer <= 0) {
+                subtitleText.setText(""); // Limpar texto quando o tempo acaba
+            }
+        }
 
         InputAppState input = getState(InputAppState.class);
         PlayerAppState playerState = getState(PlayerAppState.class);
@@ -671,6 +715,7 @@ public class HudAppState extends BaseAppState {
         hotbarSlots.forEach(Picture::removeFromParent);
         inventoryNode.removeFromParent();
         craftingTableNode.removeFromParent();
+        if (subtitleText != null) subtitleText.removeFromParent();
     }
 
     @Override protected void onEnable() {}
