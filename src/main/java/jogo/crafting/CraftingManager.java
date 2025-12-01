@@ -21,11 +21,10 @@ public class CraftingManager {
     private void initRecipes() {
         // Aqui defines todas as receitas do jogo num só lugar
         // 1 Madeira -> 4 Tábuas
-        recipes.add(new Recipe("Planks", VoxelPalette.Wood_ID, 1, VoxelPalette.PLANKS_ID, 4));
+        recipes.add(new Recipe("Planks", VoxelPalette.Wood_ID, 1, VoxelPalette.PLANKS_ID, 4, 4));
 
         // 2 Tábuas -> 4 Paus
-        recipes.add(new Recipe("Sticks", VoxelPalette.PLANKS_ID, 2, VoxelPalette.STICK_ID, 4));
-
+        recipes.add(new Recipe("Sticks", VoxelPalette.PLANKS_ID, 2, VoxelPalette.STICK_ID, 4, 4, 7));
     }
 
     public List<Recipe> getRecipes() {
