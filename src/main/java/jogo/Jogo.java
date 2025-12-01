@@ -96,6 +96,11 @@ public class Jogo extends SimpleApplication {
         lobo.setPosition(5, 25, 5);
         registry.add(lobo);
 
+        // --- Criar Trader ---
+        jogo.gameobject.character.Trader trader = new jogo.gameobject.character.Trader();
+        trader.setPosition(135, 25, 135);
+        registry.add(trader);
+
         // Post-processing: SSAO for subtle contact shadows
         try {
             FilterPostProcessor fpp = new FilterPostProcessor(assetManager);

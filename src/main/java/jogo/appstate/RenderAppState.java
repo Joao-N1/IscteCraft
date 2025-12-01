@@ -158,6 +158,27 @@ public class RenderAppState extends BaseAppState {
                 wolfNode.attachChild(g);
             }
             return wolfNode;
+        } else if (obj instanceof jogo.gameobject.character.Trader) {
+            Node traderNode = new Node("TraderVisual");
+            try {
+                // Caminho: Models/traderNPC/trader.gltf
+                Spatial model = assetManager.loadModel("Models/traderNPC/trader.gltf");
+                model.setName(obj.getName());
+
+                // Ajuste de escala (Humanoides costumam ser 0.4f neste projeto)
+                model.setLocalScale(1.3f);
+
+                // -------------------------------------------
+
+                traderNode.attachChild(model);
+            } catch (Exception e) {
+                System.out.println("Erro Trader: " + e.getMessage());
+                // Fallback: Caixa Azul
+                Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.9f, 0.4f));
+                g.setMaterial(colored(ColorRGBA.Blue));
+                traderNode.attachChild(g);
+            }
+            return traderNode;
         }
 
     // ...

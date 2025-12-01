@@ -13,6 +13,7 @@ import jogo.gameobject.character.Player;
 import jogo.gameobject.character.Sheep;
 import jogo.gameobject.character.Zombie;
 import jogo.gameobject.character.Wolf;
+import jogo.gameobject.character.Trader;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -98,6 +99,20 @@ public class NpcAppState extends BaseAppState {
 
             // Obter posição física atual
             Vector3f npcPos = control.getSpatial().getWorldTranslation();
+            // --- NOVO: Lógica Específica para o Trader ---
+            if (npc instanceof Trader) {
+                // Forçar a ficar parado
+                control.setWalkDirection(Vector3f.ZERO);
+
+                // (Opcional) Fazer com que olhe para o jogador, mas sem andar:
+                // Vector3f lookDir = playerPos.subtract(npcPos);
+                // lookDir.y = 0; lookDir.normalizeLocal();
+                // control.setViewDirection(lookDir);
+
+                // Sincronizar posição e saltar para o próximo NPC
+                npc.setPosition(npcPos.x, npcPos.y, npcPos.z);
+                continue;
+            }
 
             Vector3f dir = playerPos.subtract(npcPos);
             float distance = dir.length();
@@ -139,7 +154,7 @@ public class NpcAppState extends BaseAppState {
 
         float radius = 0.4f;
         float height = 0.9f; // Altura corrigida para evitar crash
-        if (npc instanceof Zombie) {
+        if (npc instanceof Zombie || npc instanceof Trader) {
             height = 1.8f;
         }
 
