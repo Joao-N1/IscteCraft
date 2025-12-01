@@ -13,7 +13,7 @@ public class Player extends Character {
 
     public Player() {
         super("Player");
-
+        setMaxHealth(100);
     }
 
     public boolean addItem(byte id, int amount) {

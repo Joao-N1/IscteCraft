@@ -66,6 +66,16 @@ public class RenderAppState extends BaseAppState {
                 Vec3 p = obj.getPosition();
                 s.setLocalTranslation(new Vector3f(p.x, p.y, p.z));
             }
+            // --- NOVO: Verificar se está morto ---
+            if (obj instanceof jogo.gameobject.character.Character c) {
+                if (c.isDead()) {
+                    // Se estiver morto, esconde o modelo
+                    s.setCullHint(Spatial.CullHint.Always);
+                } else {
+                    // Se estiver vivo, mostra o modelo
+                    s.setCullHint(Spatial.CullHint.Inherit);
+                }
+            }
         }
 
         // Cleanup: remove spatials for objects no longer in registry

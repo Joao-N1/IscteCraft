@@ -23,6 +23,7 @@ public class InteractionAppState extends BaseAppState {
     private final RenderIndex renderIndex;
     private final WorldAppState world;
     private float reach = 5.5f;
+    private float playerAttackCooldown = 0f;
 
     public InteractionAppState(Node rootNode, Camera cam, InputAppState input, RenderIndex renderIndex, WorldAppState world) {
         this.rootNode = rootNode;
@@ -38,6 +39,38 @@ public class InteractionAppState extends BaseAppState {
     @Override
     public void update(float tpf) {
         if (!input.isMouseCaptured()) return;
+
+        if (playerAttackCooldown > 0) playerAttackCooldown -= tpf;
+
+        // --- LÓGICA DE ATAQUE (Botão Esquerdo) ---
+        // Verificamos o input diretamente (isBreaking é o botão esquerdo no InputAppState)
+        if (input.isBreaking() && playerAttackCooldown <= 0) {
+
+            // 1. Raycast para encontrar ENTIDADES (NPCs)
+            CollisionResults results = new CollisionResults();
+            Ray ray = new Ray(cam.getLocation(), cam.getDirection());
+            ray.setLimit(4.0f); // Alcance do ataque (4 metros)
+            rootNode.collideWith(ray, results);
+
+            if (results.size() > 0) {
+                // Encontrou algo! Vamos ver se é um NPC vivo
+                Spatial target = results.getClosestCollision().getGeometry();
+                GameObject obj = findRegistered(target);
+
+                if (obj instanceof jogo.gameobject.character.Character npc && !(obj instanceof jogo.gameobject.character.Player)) {
+                    if (!npc.isDead()) {
+                        // ACERTOU!
+                        npc.takeDamage(5); // Pedido: 5 de dano
+                        playerAttackCooldown = 0.5f; // Espera 0.5s até ao próximo hit
+
+                        // Efeito visual/sonoro opcional aqui
+                        System.out.println("Atacaste " + npc.getName() + "!");
+
+                        return; // Se atacou, não parte blocos neste frame
+                    }
+                }
+            }
+        }
 
         Vector3f origin = cam.getLocation();
         Vector3f dir = cam.getDirection().normalize();

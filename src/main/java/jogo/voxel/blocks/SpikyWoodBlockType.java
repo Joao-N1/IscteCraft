@@ -7,7 +7,9 @@ import com.jme3.texture.Texture2D;
 import jogo.voxel.VoxelBlockType;
 
 public class SpikyWoodBlockType extends VoxelBlockType {
-        public SpikyWoodBlockType() {super("spikywood");}
+    public SpikyWoodBlockType() {
+        super("spikywood");
+    }
 
     @Override
     public Material getMaterial(AssetManager assetManager) {
@@ -27,5 +29,7 @@ public class SpikyWoodBlockType extends VoxelBlockType {
     }
 
     @Override
-    public int getContactDamage() {return 10;}
+    public int getContactDamage() {
+        return 10;
+    }
 }
