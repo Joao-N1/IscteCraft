@@ -165,6 +165,27 @@ public class PlayerAppState extends BaseAppState {
             pitch -= degY * FastMath.DEG_TO_RAD;
             pitch = FastMath.clamp(pitch, -FastMath.HALF_PI * 0.99f, FastMath.HALF_PI * 0.99f);
         }
+        // --- LÓGICA DE TERRENO (Speed) ---
+        float currentSpeed = 8.0f; // Velocidade base normal
+
+        if (playerNode != null && world != null) {
+            Vector3f pos = playerNode.getWorldTranslation();
+            VoxelWorld vw = world.getVoxelWorld();
+            if (vw != null) {
+                // Verificar bloco debaixo dos pés (y - 1)
+                int x = (int) Math.floor(pos.x);
+                int y = (int) Math.floor(pos.y - 0.5f);
+                int z = (int) Math.floor(pos.z);
+
+                byte blockId = vw.getBlock(x, y, z);
+
+                if (blockId == VoxelPalette.SAND_ID) {
+                    currentSpeed = 4.0f; // Metade da velocidade na areia
+                }
+            }
+        }
+
+        this.moveSpeed = currentSpeed; // Atualizar a variável da classe
 
         // Movement
         Vector3f wish = input.getMovementXZ();
@@ -295,6 +316,11 @@ public class PlayerAppState extends BaseAppState {
         Vector3f loc = playerNode.getWorldTranslation().add(0, eyeHeight, 0);
         cam.setLocation(loc);
         cam.setRotation(new com.jme3.math.Quaternion().fromAngles(pitch, yaw, 0f));
+    }
+
+    // --- ADICIONA ISTO ---
+    public WorldAppState getWorld() {
+        return world;
     }
 
     @Override

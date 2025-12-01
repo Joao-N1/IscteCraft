@@ -21,6 +21,15 @@ public abstract class VoxelBlockType {
         return true;
     }
 
+    // ... outros métodos ...
+
+    // Novo método: Define se o bloco é transparente (água, vidro)
+    // Por defeito é false (opaco)
+    public boolean isTransparent() {
+        return false;
+    }
+
+
     //define o tempo para partir os blocos
     public float getHardness() {
         return 0.1f; // Valor padrão (muito rápido)

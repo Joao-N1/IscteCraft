@@ -116,161 +116,157 @@ public class VoxelWorld {
     //TODO this is where you'll generate your world
     public void generateLayers() {
         long seed = new Random().nextLong();
+
+        // Parâmetros do Terreno
         int groundBase = 20;
         float scale = 0.03f;
-        int amplitude = 6;
+        int amplitude = 6; // O terreno vai de 14 (20-6) até 26 (20+6)
 
+        // --- ALTERAÇÕES AQUI ---
+        int MAP_LIMIT = 60;
+
+        // Aumentámos +2 blocos em cada zona
+        int SAND_WIDTH = 7;
+        int WATER_WIDTH = 10;
+
+        // Nível da Água = Nível mais baixo do terreno
+        int WATER_LEVEL = 18;
+        // -----------------------
+
+        int centerX = sizeX / 2;
+        int centerZ = sizeZ / 2;
+
+        // 1. GERAÇÃO DO TERRENO BASE
         for (int x = 0; x < sizeX; x++) {
             for (int z = 0; z < sizeZ; z++) {
 
+                int dist = Math.max(Math.abs(x - centerX), Math.abs(z - centerZ));
                 double noise = OpenSimplexNoise.OpenSimplex2S.noise2(seed, x * scale, z * scale);
                 int height = groundBase + (int)(noise * amplitude);
 
-                for (int y = 0; y <= height && y < sizeY; y++) {
-                    if (y < 20) {
+                // IMPORTANTE: Nas zonas de borda, queremos encher até ao nível da água
+                // e não limitar pela altura do noise, para o mar ser plano.
+                int loopHeight = (dist > MAP_LIMIT) ? sizeY : (height + 1);
 
-                        // ------------------------
-                        //    CAVE GENERATION 3D
-                        // ------------------------
-                        double caveNoise = OpenSimplexNoise.OpenSimplex2S.noise3_Fallback(
-                                seed + 9999,       // seed diferente para não interferir com o terreno
-                                x * 0.04,          // frequência horizontal
-                                y * 0.04,          // frequência vertical
-                                z * 0.04
-                        );
+                for (int y = 0; y < loopHeight && y < sizeY; y++) {
 
-                        // Limite: ajusta para mais cavernas ou menos
-                        if (caveNoise > 0.60) {
-                            setBlock(x, y, z, VoxelPalette.AIR_ID);
-                            continue; // passa ao próximo y sem colocar bloco
-                        }
+                    // --- ZONA FORA DO LIMITE ---
+                    if (dist > MAP_LIMIT + SAND_WIDTH + WATER_WIDTH) {
+                        setBlock(x, y, z, VoxelPalette.AIR_ID);
+                        continue;
                     }
-                    // ------------------------
-                    //   TERRENO NORMAL
-                    // ------------------------
-                    if (y == height)
-                        setBlock(x, y, z, VoxelPalette.GRASS_ID);
-                    else if (y > height - 3)
-                        setBlock(x, y, z, VoxelPalette.DIRT_ID);
-                    else
-                        setBlock(x, y, z, VoxelPalette.STONE_ID);
+
+                    // --- ZONA DE ÁGUA (Mortal) ---
+                    if (dist > MAP_LIMIT + SAND_WIDTH) {
+                        // Água preenche até ao nível calculado (14)
+                        if (y <= WATER_LEVEL) {
+                            setBlock(x, y, z, VoxelPalette.WATER_ID);
+                        } else {
+                            setBlock(x, y, z, VoxelPalette.AIR_ID);
+                        }
+                        continue;
+                    }
+
+                    // --- ZONA DE AREIA (Lenta) ---
+                    if (dist > MAP_LIMIT) {
+                        // A areia segue o relevo do terreno para fazer dunas suaves
+                        if (y <= height) {
+                            if (y == height) setBlock(x, y, z, VoxelPalette.SAND_ID);
+                            else setBlock(x, y, z, VoxelPalette.STONE_ID);
+                        }
+                        if (y == 0) setBlock(x, 0, z, VoxelPalette.THEROCK_ID);
+                        continue;
+                    }
+
+                    // --- ZONA NORMAL ---
+                    if (y <= height) {
+                        if (y < 20) {
+                            double caveNoise = OpenSimplexNoise.OpenSimplex2S.noise3_Fallback(seed + 9999, x * 0.04, y * 0.04, z * 0.04);
+                            if (caveNoise > 0.60) {
+                                setBlock(x, y, z, VoxelPalette.AIR_ID);
+                                continue;
+                            }
+                        }
+
+                        if (y == height) setBlock(x, y, z, VoxelPalette.GRASS_ID);
+                        else if (y > height - 3) setBlock(x, y, z, VoxelPalette.DIRT_ID);
+                        else setBlock(x, y, z, VoxelPalette.STONE_ID);
+                    }
+
+                    if (y == 0) setBlock(x, 0, z, VoxelPalette.THEROCK_ID);
                 }
-                // camada base inquebrável
-                setBlock(x, 0, z, VoxelPalette.THEROCK_ID);
             }
         }
 
-        // ===========================================
         // 2. GERAÇÃO DOS MINÉRIOS
-        // ===========================================
         generateOreVeins(seed);
 
-        // ===========================================
-        //  GERAÇÃO DE ÁRVORES SIMPLES
-        // ===========================================
-
-        Random random = new Random(seed + 12345); // usa seed global para árvores consistentes
-
-        int treeChance = 400; // 1 em 400 blocos gera uma árvore
-        int minHeight = 4;   // altura mínima do tronco
-        int maxHeight = 6;   // altura máxima do tronco
+        // 3. GERAÇÃO DE ÁRVORES SIMPLES
+        Random random = new Random(seed + 12345);
+        int treeChance = 400;
+        int minHeight = 4;
+        int maxHeight = 6;
 
         for (int x = 2; x < sizeX - 2; x++) {
             for (int z = 2; z < sizeZ - 2; z++) {
 
-                // chance aleatória de gerar árvore
-                if (random.nextInt(treeChance) != 0) continue;
+                int dist = Math.max(Math.abs(x - centerX), Math.abs(z - centerZ));
+                if (dist > MAP_LIMIT) continue; // Não gerar árvores na areia/água
 
-                // obter altura do solo
+                if (random.nextInt(treeChance) != 0) continue;
                 int y = getTopSolidY(x, z);
                 if (y < 0) continue;
-
-                // só gerar em cima de GRASS
                 if (getBlock(x, y, z) != VoxelPalette.GRASS_ID) continue;
 
-                // altura da árvore
                 int treeHeight = minHeight + random.nextInt(maxHeight - minHeight + 1);
-
-                // TRONCO
-                for (int h = 1; h <= treeHeight; h++) {
-                    setBlock(x, y + h, z, VoxelPalette.Wood_ID);
-                }
-
-                // FOLHAS
+                for (int h = 1; h <= treeHeight; h++) setBlock(x, y + h, z, VoxelPalette.Wood_ID);
                 int top = y + treeHeight;
-
                 for (int lx = -2; lx <= 2; lx++) {
                     for (int lz = -2; lz <= 2; lz++) {
                         for (int ly = 0; ly <= 2; ly++) {
-
-                            // deixa algumas folhas com buracos aleatórios
                             if (random.nextInt(6) == 0) continue;
-
-                            setBlock(
-                                    x + lx,
-                                    top + ly,
-                                    z + lz,
-                                    VoxelPalette.Leaf_ID
-                            );
-                        }
-                    }
-                }
-            }
-        }
-        // ===========================================
-        //  GERAÇÃO DE ÁRVORES COM ESPINHOS
-        // ===========================================
-
-        random = new Random(seed + 12345);
-
-        treeChance = 1000; // 1 em 1000 blocos gera uma árvore
-        minHeight = 4;
-        maxHeight = 6;
-
-        for (int x = 2; x < sizeX - 2; x++) {
-            for (int z = 2; z < sizeZ - 2; z++) {
-
-                // chance aleatória de gerar árvore
-                if (random.nextInt(treeChance) != 0) continue;
-
-                // obter altura do solo
-                int y = getTopSolidY(x, z);
-                if (y < 0) continue;
-
-                // só gerar em cima de GRASS
-                if (getBlock(x, y, z) != VoxelPalette.GRASS_ID) continue;
-
-                // altura da árvore
-                int treeHeight = minHeight + random.nextInt(maxHeight - minHeight + 1);
-
-                // TRONCO
-                for (int h = 1; h <= treeHeight; h++) {
-                    setBlock(x, y + h, z, VoxelPalette.SpikyWood_ID);
-                }
-
-                // FOLHAS
-                int top = y + treeHeight;
-
-                for (int lx = -2; lx <= 2; lx++) {
-                    for (int lz = -2; lz <= 2; lz++) {
-                        for (int ly = 0; ly <= 2; ly++) {
-
-                            // deixa algumas folhas com buracos aleatórios
-                            if (random.nextInt(6) == 0) continue;
-
-                            setBlock(
-                                    x + lx,
-                                    top + ly,
-                                    z + lz,
-                                    VoxelPalette.Leaf_ID
-                            );
+                            setBlock(x + lx, top + ly, z + lz, VoxelPalette.Leaf_ID);
                         }
                     }
                 }
             }
         }
 
-        System.out.println("Terreno gerado com seed: " + seed);
+        // 4. GERAÇÃO DE ÁRVORES COM ESPINHOS
+        random = new Random(seed + 67890);
+        treeChance = 1000;
+
+        for (int x = 2; x < sizeX - 2; x++) {
+            for (int z = 2; z < sizeZ - 2; z++) {
+                int dist = Math.max(Math.abs(x - centerX), Math.abs(z - centerZ));
+                if (dist > MAP_LIMIT) continue;
+
+                if (random.nextInt(treeChance) != 0) continue;
+                int y = getTopSolidY(x, z);
+                if (y < 0) continue;
+                if (getBlock(x, y, z) != VoxelPalette.GRASS_ID) continue;
+
+                int treeHeight = minHeight + random.nextInt(maxHeight - minHeight + 1);
+                for (int h = 1; h <= treeHeight; h++) {
+                    if (getBlock(x, y + h, z) == VoxelPalette.AIR_ID || getBlock(x, y + h, z) == VoxelPalette.Leaf_ID) {
+                        setBlock(x, y + h, z, VoxelPalette.SpikyWood_ID);
+                    }
+                }
+                int top = y + treeHeight;
+                for (int lx = -2; lx <= 2; lx++) {
+                    for (int lz = -2; lz <= 2; lz++) {
+                        for (int ly = 0; ly <= 2; ly++) {
+                            if (random.nextInt(6) == 0) continue;
+                            if (getBlock(x + lx, top + ly, z + lz) == VoxelPalette.AIR_ID) {
+                                setBlock(x + lx, top + ly, z + lz, VoxelPalette.Leaf_ID);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        System.out.println("Terreno gerado com limites ajustados (Água Nível 14)!");
     }
 
 
@@ -332,7 +328,7 @@ public class VoxelWorld {
             for (int cy = 0; cy < chunkCountY; cy++) {
                 for (int cz = 0; cz < chunkCountZ; cz++) {
                     Chunk chunk = chunks[cx][cy][cz];
-                    chunk.updatePhysics(space);
+                    chunk.updatePhysics(space, palette);
                 }
             }
         }
@@ -480,7 +476,7 @@ public class VoxelWorld {
                     if (chunk.isDirty()) {
                         System.out.println("Rebuilding chunk: " + cx + "," + cy + "," + cz);
                         chunk.buildMesh(assetManager, palette);
-                        chunk.updatePhysics(physicsSpace);
+                        chunk.updatePhysics(physicsSpace, palette);
                         chunk.clearDirty();
                         rebuilt++;
                     }

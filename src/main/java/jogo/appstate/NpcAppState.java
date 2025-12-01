@@ -15,6 +15,8 @@ import jogo.gameobject.character.Sheep;
 import jogo.gameobject.character.Zombie;
 import jogo.gameobject.character.Wolf;
 import jogo.gameobject.character.Trader;
+import jogo.voxel.VoxelPalette;
+import jogo.voxel.VoxelWorld;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -179,6 +181,18 @@ public class NpcAppState extends BaseAppState {
                 float speed = 1.8f;
                 if (npc instanceof Zombie) speed = 2.2f;
                 if (npc instanceof Wolf) speed = 3.5f;
+
+                VoxelWorld vw = playerState.getWorld().getVoxelWorld(); // Precisas de acesso ao VoxelWorld
+                // Se não tiveres o getter getWorld() no PlayerAppState, cria-o ou passa o WorldAppState para aqui.
+                // Assumindo que consegues aceder ao vw:
+                if (vw != null) {
+                    int nx = (int) npcPos.x;
+                    int ny = (int) (npcPos.y - 0.5f);
+                    int nz = (int) npcPos.z;
+                    if (vw.getBlock(nx, ny, nz) == VoxelPalette.SAND_ID) {
+                        speed *= 0.5f; // Reduz velocidade para metade
+                    }
+                }
 
                 control.setWalkDirection(dir.mult(speed));
                 control.setViewDirection(dir);

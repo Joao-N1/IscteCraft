@@ -93,7 +93,7 @@ public class Jogo extends SimpleApplication {
 
         // --- Criar Lobo ---
         jogo.gameobject.character.Wolf lobo = new jogo.gameobject.character.Wolf();
-        lobo.setPosition(5, 25, 5);
+        lobo.setPosition(190, 25, 190);
         registry.add(lobo);
 
         // --- Criar Trader ---

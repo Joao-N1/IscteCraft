@@ -54,33 +54,43 @@ public class Chunk {
         for (int i = 0; i < palette.size(); i++) {
             if (i == VoxelPalette.AIR_ID) continue;
             MeshBuilder mb = new MeshBuilder();
-            // Randomize UVs only for dirt to add variation without per-block materials
             mb.setRandomizeUV(true);
             builders.put((byte)i, mb);
         }
-        // Track first block position for each type
+
         Map<Byte, Vec3> firstBlockPos = new HashMap<>();
+
         for (int x = 0; x < SIZE; x++) {
             for (int y = 0; y < SIZE; y++) {
                 for (int z = 0; z < SIZE; z++) {
                     byte id = vox[x][y][z];
+
+                    // --- CORREÇÃO 1: Permitir desenhar Água ---
+                    // Antes: if (!palette.get(id).isSolid()) continue;
+                    // Agora: Só ignora se for AR. Se for Água (não sólida), desenha na mesma.
                     if (id == VoxelPalette.AIR_ID) continue;
-                    if (!palette.get(id).isSolid()) continue;
+                    // ------------------------------------------
+
                     MeshBuilder builder = builders.get(id);
                     int wx = chunkX * SIZE + x;
                     int wy = chunkY * SIZE + y;
                     int wz = chunkZ * SIZE + z;
-                    // Only add faces if neighbor is air or out of bounds
+
+                    // Verifica vizinhos.
+                    // Nota: A água vai desenhar faces se o vizinho não for sólido (Ar) ou se for sólido (Terra).
+                    // Podes refinar isto depois se vires água a desenhar contra água.
                     if (!isSolid(wx+1,wy,wz,palette)) builder.addVoxelFace(wx,wy,wz, MeshBuilder.Face.PX);
                     if (!isSolid(wx-1,wy,wz,palette)) builder.addVoxelFace(wx,wy,wz, MeshBuilder.Face.NX);
                     if (!isSolid(wx,wy+1,wz,palette)) builder.addVoxelFace(wx,wy,wz, MeshBuilder.Face.PY);
                     if (!isSolid(wx,wy-1,wz,palette)) builder.addVoxelFace(wx,wy,wz, MeshBuilder.Face.NY);
                     if (!isSolid(wx,wy,wz+1,palette)) builder.addVoxelFace(wx,wy,wz, MeshBuilder.Face.PZ);
                     if (!isSolid(wx,wy,wz-1,palette)) builder.addVoxelFace(wx,wy,wz, MeshBuilder.Face.NZ);
+
                     if (!firstBlockPos.containsKey(id)) firstBlockPos.put(id, new Vec3(wx, wy, wz));
                 }
             }
         }
+
         int geomCount = 0;
         for (Map.Entry<Byte, MeshBuilder> entry : builders.entrySet()) {
             MeshBuilder meshBuilder = entry.getValue();
@@ -89,49 +99,80 @@ public class Chunk {
                 byte id = entry.getKey();
                 Geometry g = new Geometry("chunk_"+chunkX+"_"+chunkY+"_"+chunkZ+"_"+id, mesh);
                 Vec3 blockPos = firstBlockPos.getOrDefault(id, new Vec3(chunkX*SIZE, chunkY*SIZE, chunkZ*SIZE));
-                Material mat = palette.get(id).getMaterial(assetManager, blockPos);
+
+                VoxelBlockType type = palette.get(id);
+                Material mat = type.getMaterial(assetManager, blockPos);
                 g.setMaterial(mat);
+
+                // --- CORREÇÃO 2: Bucket Transparente ---
+                // Se for água, dizemos ao motor para tratar como vidro/água
+                if (type.isTransparent()) {
+                    g.setQueueBucket(com.jme3.renderer.queue.RenderQueue.Bucket.Transparent);
+                }
+                // ---------------------------------------
+
                 node.attachChild(g);
                 geomCount++;
             }
         }
         long end = System.nanoTime();
-        System.out.println("Chunk ["+chunkX+","+chunkY+","+chunkZ+"] mesh built in " + ((end-start)/1_000_000.0) + " ms, geometries: " + geomCount);
+        // System.out.println("Chunk mesh built...");
     }
 
     /**
      * Updates the physics control for this chunk. Call after mesh rebuild.
      */
-    public void updatePhysics(PhysicsSpace space) {
+    /**
+     * Atualiza a física.
+     * ALTERAÇÃO: Agora recebe 'palette' para filtrar blocos não sólidos (água).
+     */
+    public void updatePhysics(PhysicsSpace space, VoxelPalette palette) {
         if (rigidBody != null) {
-            System.out.println("Removing old RigidBodyControl for chunk ["+chunkX+","+chunkY+","+chunkZ+"]");
             space.remove(rigidBody);
             node.removeControl(rigidBody);
             rigidBody = null;
         }
-        if (node.getQuantity() > 0) { // Only add if chunk has geometry
-            // Ensure node is attached to a parent (world node)
-            if (node.getParent() == null) {
-                System.out.println("Warning: Chunk node ["+chunkX+","+chunkY+","+chunkZ+"] not attached to world node before physics update!");
-            }
-            // Clone meshes for collision shape to avoid Bullet caching issues
-            Node tempNode = node.clone(false); // shallow clone
+
+        if (node.getQuantity() > 0) {
+            // Criar um nó temporário apenas para o que é SÓLIDO
+            Node solidNode = new Node("SolidPhysicsNode");
+            boolean hasSolidBlocks = false;
+
             for (int i = 0; i < node.getQuantity(); i++) {
                 if (node.getChild(i) instanceof Geometry) {
                     Geometry g = (Geometry) node.getChild(i);
-                    Geometry gClone = g.clone(false);
-                    gClone.setMesh(g.getMesh().deepClone());
-                    tempNode.attachChild(gClone);
+
+                    // O nome da Geometry é "chunk_x_y_z_ID". Vamos extrair o ID.
+                    String[] parts = g.getName().split("_");
+                    try {
+                        byte id = Byte.parseByte(parts[parts.length - 1]);
+
+                        // SÓ adiciona à física se for sólido! (Água é ignorada aqui)
+                        if (palette.get(id).isSolid()) {
+                            Geometry gClone = g.clone(false);
+                            gClone.setMesh(g.getMesh().deepClone());
+                            solidNode.attachChild(gClone);
+                            hasSolidBlocks = true;
+                        }
+                    } catch (Exception e) {
+                        // Se falhar o parse, assume que é sólido por segurança
+                        Geometry gClone = g.clone(false);
+                        gClone.setMesh(g.getMesh().deepClone());
+                        solidNode.attachChild(gClone);
+                        hasSolidBlocks = true;
+                    }
                 }
             }
-            CollisionShape shape = CollisionShapeFactory.createMeshShape(tempNode);
-            rigidBody = new RigidBodyControl(shape, 0f);
-            node.addControl(rigidBody);
-            space.add(rigidBody);
-            System.out.println("Added new RigidBodyControl for chunk ["+chunkX+","+chunkY+","+chunkZ+"]");
+
+            // Se depois de filtrar houver blocos sólidos, cria a colisão
+            if (hasSolidBlocks) {
+                CollisionShape shape = CollisionShapeFactory.createMeshShape(solidNode);
+                rigidBody = new RigidBodyControl(shape, 0f);
+                node.addControl(rigidBody);
+                space.add(rigidBody);
+            }
         }
     }
-
     // Helper for solid check in world coordinates
     private boolean isSolid(int wx, int wy, int wz, VoxelPalette palette) {
         if (wx < 0 || wy < 0 || wz < 0) return false;
