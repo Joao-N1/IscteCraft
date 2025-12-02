@@ -266,8 +266,8 @@ public class HudAppState extends BaseAppState {
         try { craftingBg.setImage(assetManager, "Interface/CraftingUI.png", true); }
         catch (Exception e) { craftingBg.setImage(assetManager, "Interface/hotbarsquare.png", true); }
 
-        craftingBg.setWidth(400f);
-        craftingBg.setHeight(300f);
+        craftingBg.setWidth(TABLE_WIDTH);
+        craftingBg.setHeight(PANEL_HEIGHT);
         craftingTableNode.attachChild(craftingBg);
 
         // 2. LIVRO (Agora adicionado corretamente!)
@@ -303,7 +303,7 @@ public class HudAppState extends BaseAppState {
     }
 
     private void createRecipeIcons(List<Recipe> rList, List<Picture> iList, Node parent) {
-        float iconSize = 40f;
+        float iconSize = 32f;
         for (int i = 0; i < rList.size(); i++) {
             Recipe r = rList.get(i);
             Picture icon = new Picture("Rec_" + r.name);
