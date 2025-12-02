@@ -180,7 +180,7 @@ public class VoxelWorld {
 
                     // --- ZONA NORMAL ---
                     if (y <= height) {
-                        if (y < 20) {
+                        if (y > 0 && y < 20) {
                             double caveNoise = OpenSimplexNoise.OpenSimplex2S.noise3_Fallback(seed + 9999, x * 0.04, y * 0.04, z * 0.04);
                             if (caveNoise > 0.60) {
                                 setBlock(x, y, z, VoxelPalette.AIR_ID);

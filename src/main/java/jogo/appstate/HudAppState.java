@@ -495,8 +495,8 @@ public class HudAppState extends BaseAppState {
 
                 if (stack.getAmount() > 1) {
                     text.setText(String.valueOf(stack.getAmount()));
-                    float tx = bg.getWorldTranslation().x + bg.getWidth() - text.getLineWidth() - 2f;
-                    float ty = bg.getWorldTranslation().y + text.getLineHeight();
+                    float tx = bg.getWorldTranslation().x + bg.getWidth() - text.getLineWidth() - 7f;
+                    float ty = bg.getWorldTranslation().y + text.getLineHeight() + 5f;
                     text.setLocalTranslation(tx, ty, 1);
                 } else {
                     text.setText("");

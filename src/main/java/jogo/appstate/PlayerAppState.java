@@ -12,10 +12,15 @@ import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import jogo.gameobject.character.Player;
+import jogo.gameobject.item.DroppedItem;
+import jogo.gameobject.item.ItemStack;
 import jogo.voxel.VoxelPalette;
 import jogo.voxel.VoxelWorld;
 import com.jme3.audio.AudioNode;
 import com.jme3.audio.AudioData;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PlayerAppState extends BaseAppState {
 
@@ -130,6 +135,47 @@ public class PlayerAppState extends BaseAppState {
         if (playerNode != null && player != null) {
             Vector3f physPos = playerNode.getWorldTranslation();
             player.setPosition(physPos.x, physPos.y, physPos.z);
+        }
+        // --- 1. ATIRAR ITEM (Tecla G) ---
+        if (input.consumeDropRequested()) {
+            // Ver o que temos na mão
+            byte heldId = player.getHeldItem();
+            if (heldId != 0) {
+                // Criar um stack de 1 unidade desse item
+                ItemStack dropStack = new ItemStack(heldId, 1);
+
+                // Calcular posição (à frente dos olhos) e força do lançamento
+                Vector3f camPos = cam.getLocation();
+                Vector3f launchDir = cam.getDirection().mult(8.0f); // Força 8
+
+                // Chamar o spawn no WorldAppState
+                if (world != null) {
+                    world.spawnDroppedItem(camPos, launchDir, dropStack);
+                    player.consumeHeldItem(); // Remove 1 do inventário
+                }
+            }
+        }
+
+        // --- 2. APANHAR ITENS (Colisão) ---
+        if (world != null) {
+            // Percorrer lista de itens no chão (usar cópia para evitar erro de concorrência)
+            List<DroppedItem> items = new ArrayList<>(world.getDroppedItems());
+            Vector3f playerPos = playerNode.getWorldTranslation().add(0, 1f, 0); // Centro do corpo
+
+            for (DroppedItem item : items) {
+                if (!item.canBePickedUp()) continue;
+
+                // Verificar distância (1.5 metros)
+                if (playerPos.distance(item.getNode().getWorldTranslation()) < 1.5f) {
+                    // Tentar adicionar ao inventário
+                    if (player.addItem(item.getStack().getId(), item.getStack().getAmount())) {
+                        // Se coube, remover do mundo
+                        world.removeDroppedItem(item);
+                        System.out.println("Apanhaste item!");
+                        // Opcional: Tocar som "Pop"
+                    }
+                }
+            }
         }
 
         // 1. Verificar Inventário ('I')

@@ -28,6 +28,7 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
     private int hotbarRequest = -1;
     private volatile boolean useRequested;
     private volatile boolean uiClickRequested;
+    private volatile boolean dropRequested;
 
     @Override
     protected void initialize(Application app) {
@@ -69,6 +70,10 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
 
         im.addMapping("Use", new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
         im.addListener(this, "Use");
+
+        // 2. MAPEAMENTO DO G
+        im.addMapping("DropItem", new KeyTrigger(KeyInput.KEY_G));
+        im.addListener(this, "DropItem");
     }
 
     @Override
@@ -144,10 +149,24 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
             case "OpenInventory" -> {
                 if (isPressed) inventoryRequested = true;
             }
+
+            case "DropItem" -> {
+                if (isPressed) {
+                    dropRequested = true; // CLICOU NA UI
+                }
+            }
+
         }
     }
 
     // --- NOVOS MÉTODOS PARA CONSUMIR INPUT ---
+    public boolean consumeDropRequested() {
+        boolean r = dropRequested;
+        dropRequested = false;
+        return r;
+    }
+
+
     public boolean consumeUseRequested() {
         boolean r = useRequested;
         useRequested = false;
