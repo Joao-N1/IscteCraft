@@ -94,8 +94,8 @@ public class PlayerAppState extends BaseAppState {
 
         // Local light source that follows the player's head
         playerLight = new PointLight();
-        playerLight.setColor(new com.jme3.math.ColorRGBA(0.6f, 0.55f, 0.5f, 1f));
-        playerLight.setRadius(12f);
+        playerLight.setColor(new com.jme3.math.ColorRGBA(1.2f, 1.2f, 1.1f, 1f));
+        playerLight.setRadius(30f);
         rootNode.addLight(playerLight);
 
         // --- Configuração do Som de Dano ---

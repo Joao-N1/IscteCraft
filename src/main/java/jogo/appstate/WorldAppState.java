@@ -76,12 +76,12 @@ public class WorldAppState extends BaseAppState {
 
         // Lighting
         AmbientLight ambient = new AmbientLight();
-        ambient.setColor(ColorRGBA.White.mult(0.20f));
+        ambient.setColor(ColorRGBA.White.mult(0.60f));
         worldNode.addLight(ambient);
 
         DirectionalLight sun = new DirectionalLight();
         sun.setDirection(new Vector3f(-0.35f, -1.3f, -0.25f).normalizeLocal());
-        sun.setColor(ColorRGBA.White.mult(0.85f));
+        sun.setColor(ColorRGBA.White.mult(1.3f));
         worldNode.addLight(sun);
 
         // compute recommended spawn
