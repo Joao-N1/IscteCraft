@@ -4,10 +4,12 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.control.BetterCharacterControl;
+import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import jogo.engine.GameRegistry;
+import jogo.framework.math.Vec3; // Importante para ler a posição
 import jogo.gameobject.GameObject;
 import jogo.gameobject.character.Character;
 import jogo.gameobject.character.Player;
@@ -15,8 +17,8 @@ import jogo.gameobject.character.Sheep;
 import jogo.gameobject.character.Zombie;
 import jogo.gameobject.character.Wolf;
 import jogo.gameobject.character.Trader;
-import jogo.voxel.VoxelPalette;
 import jogo.voxel.VoxelWorld;
+import jogo.voxel.VoxelPalette;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -32,14 +34,15 @@ public class NpcAppState extends BaseAppState {
     private final Map<Character, BetterCharacterControl> npcControls = new HashMap<>();
     private final Node npcPhysicsNode = new Node("NpcPhysics");
 
-    // Mapa para guardar cooldowns de ataque dos inimigos (NPC -> Tempo restante)
+    // Combate e Respawn
     private final Map<Character, Float> attackCooldowns = new HashMap<>();
-
-    // Mapa para gerir respawn (NPC -> Tempo até nascer)
     private final Map<Character, Float> respawnTimers = new HashMap<>();
     private final float RESPAWN_TIME = 30.0f;
 
-    // Variável para o temporizador do GPS
+    // Vaguear (Wandering)
+    private final Map<Character, Float> wanderTimers = new HashMap<>();
+    private final Map<Character, Vector3f> wanderDirections = new HashMap<>();
+
     private float gpsTimer = 0f;
 
     public NpcAppState(Node rootNode, PhysicsSpace physicsSpace, GameRegistry registry, PlayerAppState playerState) {
@@ -59,7 +62,7 @@ public class NpcAppState extends BaseAppState {
         Player player = playerState.getPlayer();
         if (player == null) return;
 
-        // --- 0. GESTÃO DE RESPAWN (Lógica de Renascer) ---
+        // --- 0. GESTÃO DE RESPAWN ---
         Iterator<Map.Entry<Character, Float>> it = respawnTimers.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Character, Float> entry = it.next();
@@ -67,36 +70,38 @@ public class NpcAppState extends BaseAppState {
             float timeLeft = entry.getValue() - tpf;
 
             if (timeLeft <= 0) {
-                // HORA DE RENASCER!
                 npc.respawn();
-
-                // Reativar física e visual
                 if (npcControls.containsKey(npc)) {
                     BetterCharacterControl ctrl = npcControls.get(npc);
                     ctrl.setEnabled(true);
-                    ctrl.getSpatial().setCullHint(Spatial.CullHint.Inherit); // Mostrar
-
+                    ctrl.getSpatial().setCullHint(Spatial.CullHint.Inherit);
                     ctrl.setGravity(new Vector3f(0, -20f, 0));
-
-                    // Teleportar para o ar para não ficar preso
-                    ctrl.warp(new Vector3f(npc.getPosition().x, 26, npc.getPosition().z));
+                    // Correção do erro anterior: converter Vec3 para Vector3f manualmente
+                    Vec3 p = npc.getPosition();
+                    ctrl.warp(new Vector3f(p.x, 50f, p.z));
                 }
-                it.remove(); // Remove do timer
+                it.remove();
             } else {
-                entry.setValue(timeLeft); // Atualiza tempo
+                entry.setValue(timeLeft);
             }
         }
 
-        // --- SISTEMA DE GPS (A CADA 5 SEGUNDOS) ---
+        // --- GPS (Debug) ---
         gpsTimer += tpf;
         if (gpsTimer >= 5.0f) {
             gpsTimer = 0f;
-            var pPos = player.getPosition();
-            System.out.println("\n===== GPS =====");
-            System.out.println("JOGADOR: " + String.format("%.1f, %.1f, %.1f", pPos.x, pPos.y, pPos.z));
-            // Podes descomentar o loop abaixo para ver NPCs também
+            Vec3 pp = player.getPosition();
+            System.out.println("\n===== GPS REPORT =====");
+            System.out.println("JOGADOR: " + String.format("%.1f, %.1f, %.1f", pp.x, pp.y, pp.z));
+
             for (Character npc : npcControls.keySet()) {
-                 if(!npc.isDead()) System.out.println(npc.getName() + ": " + npc.getPosition().x + ", " + npc.getPosition().y + ", " + npc.getPosition().z);
+                if (!npc.isDead()) {
+                    Vec3 np = npc.getPosition();
+                    BetterCharacterControl ctrl = npcControls.get(npc);
+                    String status = (ctrl.getVelocity().length() > 0.1f) ? "A andar" : "Parado";
+                    System.out.println(npc.getName().toUpperCase() + ": " +
+                            String.format("%.1f, %.1f, %.1f", np.x, np.y, np.z) + " [" + status + "]");
+                }
             }
         }
 
@@ -109,101 +114,124 @@ public class NpcAppState extends BaseAppState {
             }
         }
 
-        // 2. Atualizar IA de TODOS os NPCs
-        // Usar new Vector3f() para converter o Vec3 do jogador para JME Vector3f
-        Vector3f playerPos = new Vector3f(player.getPosition().x, player.getPosition().y, player.getPosition().z);
+        // 2. Atualizar IA
+        Vec3 pp = player.getPosition();
+        Vector3f playerPos = new Vector3f(pp.x, pp.y, pp.z);
 
         for (Map.Entry<Character, BetterCharacterControl> entry : npcControls.entrySet()) {
             Character npc = entry.getKey();
             BetterCharacterControl control = entry.getValue();
 
-            // --- VERIFICAÇÃO DE MORTE ---
-            // Se estiver morto, ignoramos movimento e escondemos
             if (npc.isDead()) {
                 if (!respawnTimers.containsKey(npc)) {
-                    // Morreu neste frame
                     respawnTimers.put(npc, RESPAWN_TIME);
-                    control.setEnabled(false); // Desliga física
-                    control.getSpatial().setCullHint(Spatial.CullHint.Always); // Esconde visual
+                    control.setEnabled(false);
+                    control.getSpatial().setCullHint(Spatial.CullHint.Always);
                 }
-                continue; // Salta para o próximo NPC
+                continue;
             }
 
-            // --- LÓGICA DE VIDA (IA) ---
             Vector3f npcPos = control.getSpatial().getWorldTranslation();
 
-            // Atualizar cooldown de ataque
             float atkCd = attackCooldowns.getOrDefault(npc, 0f);
             if (atkCd > 0) attackCooldowns.put(npc, atkCd - tpf);
 
-            // TRADER (Passivo e Parado)
+            // TRADER (Sempre Parado)
             if (npc instanceof Trader) {
                 control.setWalkDirection(Vector3f.ZERO);
                 npc.setPosition(npcPos.x, npcPos.y, npcPos.z);
                 continue;
             }
 
-            Vector3f dir = playerPos.subtract(npcPos);
-            float distance = dir.length();
-            dir.y = 0;
+            Vector3f dirToPlayer = playerPos.subtract(npcPos);
+            float distance = dirToPlayer.length();
+            dirToPlayer.y = 0;
 
-            // INIMIGOS (Zombie e Lobo) - Atacam se estiverem perto
             boolean isHostile = (npc instanceof Zombie || npc instanceof Wolf);
 
-            // --- LÓGICA DE ATAQUE ---
-            if (isHostile && distance < 1.5f) {
-                // Perto do jogador: Para e morde
-                control.setWalkDirection(Vector3f.ZERO);
-                control.setViewDirection(dir);
+            // Velocidade Base
+            float runSpeed = 1.8f;
+            if (npc instanceof Zombie) runSpeed = 2.2f;
+            if (npc instanceof Wolf) runSpeed = 3.5f;
 
-                if (atkCd <= 0) {
-                    // DANO AO JOGADOR
-                    playerState.takeDamage(10);
-
-                    attackCooldowns.put(npc, 1.5f); // Espera 1.5s
-                    System.out.println("Cuidado! " + npc.getName() + " atacou-te!");
-                }
-            }
-            // --- LÓGICA DE SEGUIR ---
-            else if (distance > 1.5f && distance < 25.0f) {
-                dir.normalizeLocal();
-
-                // AUTO-JUMP
-                Vector3f scanOrigin = npcPos.add(0, 0.5f, 0);
-                Vector3f scanTarget = scanOrigin.add(dir.mult(1.0f)); // Ajustado para 1.0f
-                var results = physicsSpace.rayTest(scanOrigin, scanTarget);
-
-                // Só salta se estiver longe do jogador (> 4m) para não saltar no ataque
-                if (results.size() > 0 && control.isOnGround() && distance > 4.0f) {
-                    control.jump();
-                }
-
-                float speed = 1.8f;
-                if (npc instanceof Zombie) speed = 2.2f;
-                if (npc instanceof Wolf) speed = 3.5f;
-
-                VoxelWorld vw = playerState.getWorld().getVoxelWorld(); // Precisas de acesso ao VoxelWorld
-                // Se não tiveres o getter getWorld() no PlayerAppState, cria-o ou passa o WorldAppState para aqui.
-                // Assumindo que consegues aceder ao vw:
+            // Lógica de Areia (Lentidão)
+            if (playerState.getWorld() != null) {
+                VoxelWorld vw = playerState.getWorld().getVoxelWorld();
                 if (vw != null) {
                     int nx = (int) npcPos.x;
                     int ny = (int) (npcPos.y - 0.5f);
                     int nz = (int) npcPos.z;
                     if (vw.getBlock(nx, ny, nz) == VoxelPalette.SAND_ID) {
-                        speed *= 0.5f; // Reduz velocidade para metade
+                        runSpeed *= 0.5f;
                     }
                 }
-
-                control.setWalkDirection(dir.mult(speed));
-                control.setViewDirection(dir);
-
-            } else {
-                // Longe demais ou Trader: Parar
-                control.setWalkDirection(Vector3f.ZERO);
             }
 
-            // Sincronizar Posição Lógica
+            // --- ESTADO 1: ATACAR ---
+            if (isHostile && distance < 1.5f) {
+                control.setWalkDirection(Vector3f.ZERO);
+                control.setViewDirection(dirToPlayer);
+
+                if (atkCd <= 0) {
+                    playerState.takeDamage(10);
+                    attackCooldowns.put(npc, 1.5f);
+                    System.out.println("Cuidado! " + npc.getName() + " atacou-te!");
+                }
+            }
+            // --- ESTADO 2: PERSEGUIR ---
+            else if (distance > 1.5f && distance < 25.0f) {
+                dirToPlayer.normalizeLocal();
+                handleAutoJump(control, npcPos, dirToPlayer, distance);
+                control.setWalkDirection(dirToPlayer.mult(runSpeed));
+                control.setViewDirection(dirToPlayer);
+
+                wanderTimers.put(npc, 0f); // Reset vaguear
+            }
+            // --- ESTADO 3: VAGUEAR (Wandering) ---
+            else {
+                float wTimer = wanderTimers.getOrDefault(npc, 0f);
+                wTimer -= tpf;
+
+                if (wTimer <= 0) {
+                    // Novo destino a cada 2-7 segundos
+                    wTimer = 2f + FastMath.nextRandomFloat() * 5f;
+
+                    if (FastMath.nextRandomFloat() < 0.4f) {
+                        wanderDirections.put(npc, Vector3f.ZERO); // Parar
+                    } else {
+                        float angle = FastMath.nextRandomFloat() * FastMath.TWO_PI;
+                        Vector3f randomDir = new Vector3f(FastMath.cos(angle), 0, FastMath.sin(angle));
+                        wanderDirections.put(npc, randomDir);
+                    }
+                    wanderTimers.put(npc, wTimer);
+                } else {
+                    wanderTimers.put(npc, wTimer);
+                }
+
+                Vector3f wDir = wanderDirections.getOrDefault(npc, Vector3f.ZERO);
+
+                if (wDir != Vector3f.ZERO) {
+                    handleAutoJump(control, npcPos, wDir, 100f); // 100f = longe do player, pode saltar sempre
+                    control.setWalkDirection(wDir.mult(runSpeed * 0.5f)); // Vagueia devagar
+                    control.setViewDirection(wDir);
+                } else {
+                    control.setWalkDirection(Vector3f.ZERO);
+                }
+            }
+
             npc.setPosition(npcPos.x, npcPos.y, npcPos.z);
+        }
+    }
+
+    private void handleAutoJump(BetterCharacterControl control, Vector3f position, Vector3f direction, float distanceToPlayer) {
+        Vector3f scanOrigin = position.add(0, 0.5f, 0);
+        Vector3f scanTarget = scanOrigin.add(direction.mult(1.2f));
+
+        var results = physicsSpace.rayTest(scanOrigin, scanTarget);
+
+        // Só salta se houver obstáculo E estiver longe do jogador (> 4m)
+        if (results.size() > 0 && control.isOnGround() && distanceToPlayer > 4.0f) {
+            control.jump();
         }
     }
 
@@ -224,7 +252,10 @@ public class NpcAppState extends BaseAppState {
         npcPhysicsNode.attachChild(node);
 
         physicsSpace.add(control);
-        control.warp(new Vector3f(npc.getPosition().x, npc.getPosition().y, npc.getPosition().z));
+
+        // Correção: Converter Vec3 manual
+        Vec3 p = npc.getPosition();
+        control.warp(new Vector3f(p.x, p.y, p.z));
 
         npcControls.put(npc, control);
     }
@@ -234,6 +265,9 @@ public class NpcAppState extends BaseAppState {
         npcPhysicsNode.removeFromParent();
         for (BetterCharacterControl c : npcControls.values()) physicsSpace.remove(c);
         npcControls.clear();
+        wanderTimers.clear();
+        wanderDirections.clear();
+        respawnTimers.clear();
     }
 
     @Override protected void onEnable() {}
