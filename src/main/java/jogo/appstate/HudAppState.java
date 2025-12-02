@@ -40,7 +40,25 @@ public class HudAppState extends BaseAppState {
     private Picture cursorItemIcon; // Item "preso" ao rato
     private List<Picture> hearts = new ArrayList<>();
 
-    // --- UI CRAFTING ---
+    // ======================= UI CRAFTING (VISUAL NOVO) ========================
+
+    // Imagens de Fundo
+    private Picture recipeBookBg;
+
+    // Configurações de Tamanho e Posição
+    private final float PANEL_HEIGHT = 300f;
+    private final float TABLE_WIDTH = 270f;
+    private final float BOOK_WIDTH = 270f;
+    private final float PANEL_OVERLAP = 0f; // Ajuste de conexão
+
+    // Grelha do Livro
+    private final int GRID_COLS = 4;
+    private final float GRID_START_X = 21f; // Margem esquerda dentro do livro
+    private final float GRID_START_Y = 89f; // Margem topo dentro do livro
+    private final float SLOT_SIZE = 44f;    // Tamanho do slot
+    private final float SLOT_GAP = 3f;      // Espaço entre slots
+
+    // ==========================================================================
     // Receitas do Jogador (Básico - sempre visível no inventário)
     private List<Recipe> playerRecipes = new ArrayList<>();
     private List<Picture> playerRecipeIcons = new ArrayList<>();
@@ -235,6 +253,7 @@ public class HudAppState extends BaseAppState {
 
         // Mesa (Interface dedicada)
         initTableUI();
+
         tableRecipes.add(rPlanks);
         tableRecipes.add(rSticks);
         // tableRecipes.add(rTable);
@@ -242,16 +261,29 @@ public class HudAppState extends BaseAppState {
     }
 
     private void initTableUI() {
+        // 1.Mesa
         craftingBg = new Picture("CraftingBg");
         try { craftingBg.setImage(assetManager, "Interface/CraftingUI.png", true); }
         catch (Exception e) { craftingBg.setImage(assetManager, "Interface/hotbarsquare.png", true); }
 
-        // Tamanho pedido por ti
         craftingBg.setWidth(400f);
         craftingBg.setHeight(300f);
         craftingTableNode.attachChild(craftingBg);
 
-        // 1. Criar a Grelha Visual (3x3) para mostrar onde os materiais ficam
+        // 2. LIVRO (Agora adicionado corretamente!)
+        recipeBookBg = new Picture("RecipeBookBg");
+        try {
+            recipeBookBg.setImage(assetManager, "Interface/RecipeBook.png", true);
+        } catch (Exception e) {
+            System.out.println("Erro ao carregar RecipeBook.png, fallback cor castanha.");
+            recipeBookBg.setImage(assetManager, "Interface/hotbarsquare.png", true);
+            recipeBookBg.getMaterial().setColor("Color", ColorRGBA.Brown);
+        }
+        recipeBookBg.setWidth(BOOK_WIDTH);
+        recipeBookBg.setHeight(PANEL_HEIGHT);
+        craftingTableNode.attachChild(recipeBookBg); // <--- IMPORTANTE
+
+        // 3. Criar a Grelha Visual (3x3) para mostrar onde os materiais ficam
         float slotSize = 30f;
         for (int i = 0; i < 9; i++) {
             Picture gridIcon = new Picture("GridIcon_" + i);
@@ -262,7 +294,7 @@ public class HudAppState extends BaseAppState {
             gridInputIcons.add(gridIcon);
         }
 
-        // 2. Criar o Ícone de Resultado (Botão de Crafting)
+        // 4. Criar o Ícone de Resultado (Botão de Crafting)
         resultIcon = new Picture("ResultIcon");
         resultIcon.setWidth(slotSize * 1.5f);
         resultIcon.setHeight(slotSize * 1.5f);
@@ -341,12 +373,12 @@ public class HudAppState extends BaseAppState {
 
     // Interação na Mesa: Selecionar Receita OU Clicar no Resultado
     private void handleTableInteraction(Vector2f mouse, Player p) {
-        // A. Verificar se clicou numa receita da lista (lado esquerdo)
+        // Livro
         for (int i = 0; i < tableRecipeIcons.size(); i++) {
             Picture icon = tableRecipeIcons.get(i);
             if (isMouseOver(icon, mouse)) {
                 selectedRecipe = tableRecipes.get(i);
-                updateGridVisuals(); // Mostra os materiais na grelha
+                updateGridVisuals();
                 return;
             }
         }
@@ -665,48 +697,60 @@ public class HudAppState extends BaseAppState {
             }
         }
 
-        // 4. Mesa de Crafting
+        // 4.MESA + LIVRO CENTRADOS
         if (isCraftingOpen) {
-            float cw = craftingBg.getWidth();
-            float ch = craftingBg.getHeight();
-            // Centrado na metade SUPERIOR do ecrã
-            float tx = (w / 2f) - (cw / 2f);
-            float ty = (h / 2f) - (ch / 2f) + 80f;
+            float totalWidth = BOOK_WIDTH + TABLE_WIDTH - PANEL_OVERLAP;
+            float groupStartX = (w - totalWidth) / 2f;
+            float groupStartY = (h - PANEL_HEIGHT) / 2f + 40f;
 
-            craftingTableNode.setLocalTranslation(tx, ty, 0);
+            // Mesa (Direita)
+            float tableScreenX = groupStartX + BOOK_WIDTH - PANEL_OVERLAP;
+            craftingTableNode.setLocalTranslation(tableScreenX, groupStartY, 0);
             craftingBg.setPosition(0, 0);
 
-            // A. Lista de Receitas (Lado Esquerdo da mesa)
-            float listX = 20f;
-            float listY = ch - 40f;
-            for (int i = 0; i < tableRecipeIcons.size(); i++) {
-                Picture icon = tableRecipeIcons.get(i);
-                float y = listY - (i * 50f);
-                icon.setPosition(listX, y);
-                BitmapText lbl = (BitmapText) icon.getUserData("label");
-                if(lbl!=null) lbl.setLocalTranslation(listX+45f, y+25f, 1);
+            // Livro (Esquerda)
+            recipeBookBg.setPosition(-BOOK_WIDTH + PANEL_OVERLAP, 0);
 
-                updateRecipeColors(tableRecipes, tableRecipeIcons, getState(PlayerAppState.class).getPlayer());
-            }
-
-            // B. Grelha Visual (Centro da mesa)
-            float gridStartX = 120f; // Espaço para a lista à esquerda
-            float gridStartY = ch - 50f;
+            // Grelha da Mesa (Ajustada para a tua imagem)
+            float gridStartX = (TABLE_WIDTH / 2f) - 101f;
+            float gridStartY = PANEL_HEIGHT - 113f;
             float gridSize = 30f;
-            float gap = 5f;
+            float gap = 8f;
 
             for (int i = 0; i < 9; i++) {
-                int r = i / 3;
-                int c = i % 3;
+                int r = i / 3; int c = i % 3;
                 float gx = gridStartX + c * (gridSize + gap);
                 float gy = gridStartY - r * (gridSize + gap);
                 gridInputIcons.get(i).setPosition(gx, gy);
             }
-
-            // C. Resultado (Lado Direito)
-            float resX = gridStartX + 3 * (gridSize + gap) + 30f;
+            float resX = gridStartX + 3 * (gridSize + gap) + 45f;
             float resY = gridStartY - (gridSize + gap);
             resultIcon.setPosition(resX, resY);
+
+            // Grelha do Livro
+            float bookOriginX = -BOOK_WIDTH + PANEL_OVERLAP;
+            float currentGridX = bookOriginX + GRID_START_X;
+            float currentGridY = PANEL_HEIGHT - GRID_START_Y;
+
+            for (int i = 0; i < tableRecipeIcons.size(); i++) {
+                Picture icon = tableRecipeIcons.get(i);
+                int col = i % GRID_COLS;
+                int row = i / GRID_COLS;
+                float x = currentGridX + (col * (SLOT_SIZE + SLOT_GAP));
+                float y = currentGridY - (row * (SLOT_SIZE + SLOT_GAP));
+                float offset = (SLOT_SIZE - icon.getWidth()) / 2f;
+                icon.setPosition(x + offset, y - offset);
+                icon.setCullHint(Node.CullHint.Never);
+
+                Recipe r = tableRecipes.get(i);
+                Player p = getState(PlayerAppState.class).getPlayer();
+                if (icon.getMaterial() != null) {
+                    if (p.hasItem(r.inputId, r.inputCount)) icon.getMaterial().setColor("Color", ColorRGBA.White);
+                    else icon.getMaterial().setColor("Color", ColorRGBA.Gray);
+                }
+                BitmapText lbl = (BitmapText) icon.getUserData("label");
+                if(lbl != null) lbl.setCullHint(Node.CullHint.Always);
+            }
         }
     }
 
