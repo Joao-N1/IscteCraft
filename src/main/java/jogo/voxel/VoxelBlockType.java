@@ -35,6 +35,10 @@ public abstract class VoxelBlockType {
         return 0.1f; // Valor padrão (muito rápido)
     }
 
+    public byte getDropItem() {
+        return 0;
+    }
+
     /**
      * Returns the Material for this block type. Override in subclasses for custom materials.
      */

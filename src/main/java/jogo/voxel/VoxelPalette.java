@@ -1,7 +1,6 @@
 package jogo.voxel;
 
 import jogo.voxel.blocks.*;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,25 +24,36 @@ public class VoxelPalette {
 
     public static VoxelPalette defaultPalette() {
         VoxelPalette p = new VoxelPalette();
-        p.register(new AirBlockType());   // id 0
-        p.register(new StoneBlockType()); // id 1
-        p.register(new TheRockBlockType()); // id 2
-        p.register(new DirtBlockType()); // id 3
-        p.register(new GrassBlockType()); // id 4
-        p.register(new WoodBlockType()); // id 5
-        p.register(new SpikyWoodBlockType()); // id 6
-        p.register(new LeafBlockType()); // id 7
-        p.register(new CoalBlockType()); // id 8
-        p.register(new IronBlockType()); // id 9
-        p.register(new DiamondBlockType()); // id 10
-        p.register(new PlanksBlockType()); // id 11
-        p.register(new StickBlockType());  // id 12
-        p.register(new CraftingTableBlockType()); // id 13
-        p.register(new SandBlockType());  // ID 14
-        p.register(new WaterBlockType()); // ID 15
+        p.register(new AirBlockType());        // 0
+        p.register(new StoneBlockType());      // 1
+        p.register(new TheRockBlockType());    // 2
+        p.register(new DirtBlockType());       // 3
+        p.register(new GrassBlockType());      // 4
+        p.register(new WoodBlockType());       // 5
+        p.register(new SpikyWoodBlockType());  // 6
+        p.register(new LeafBlockType());       // 7
+        p.register(new CoalBlockType());       // 8
+        p.register(new IronBlockType());       // 9
+        p.register(new DiamondBlockType());    // 10
+        p.register(new PlanksBlockType());     // 11
+        p.register(new StickBlockType());      // 12
+        p.register(new CraftingTableBlockType()); // 13
+        p.register(new SandBlockType());       // 14
+        p.register(new WaterBlockType());      // 15
+
+        // Novos Itens
+        p.register(new CoalItemBlockType());   // 16
+        p.register(new IronItemBlockType());   // 17
+        p.register(new LanternOffBlockType()); // 18
+        p.register(new LanternOnBlockType());  // 19
+        p.register(new WoodPickBlockType());   // 20
+        p.register(new StonePickBlockType());  // 21
+        p.register(new IronPickBlockType());   // 22
+
         return p;
     }
 
+    // IDs Estáticos
     public static final byte AIR_ID = 0;
     public static final byte STONE_ID = 1;
     public static final byte THEROCK_ID = 2;
@@ -60,4 +70,12 @@ public class VoxelPalette {
     public static final byte CRAFTING_TABLE_ID = 13;
     public static final byte SAND_ID = 14;
     public static final byte WATER_ID = 15;
+
+    public static final byte COAL_MAT_ID = 16;
+    public static final byte IRON_MAT_ID = 17;
+    public static final byte LANTERN_OFF_ID = 18;
+    public static final byte LANTERN_ON_ID = 19;
+    public static final byte WOOD_PICK_ID = 20;
+    public static final byte STONE_PICK_ID = 21;
+    public static final byte IRON_PICK_ID = 22;
 }

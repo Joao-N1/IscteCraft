@@ -19,6 +19,10 @@ import jogo.voxel.VoxelWorld;
 import com.jme3.audio.AudioNode;
 import com.jme3.audio.AudioData;
 
+import jogo.system.GameSaveData;
+import jogo.system.SaveManager;
+import jogo.voxel.Chunk;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,6 +61,8 @@ public class PlayerAppState extends BaseAppState {
 
     //Audios/Sound Effects
     private AudioNode audioHurt;
+
+    private String currentSaveFileName;
 
     public Player getPlayer() {
         return player;
@@ -105,6 +111,9 @@ public class PlayerAppState extends BaseAppState {
         audioHurt.setVolume(3.0f);
         playerNode.attachChild(audioHurt);
 
+        this.currentSaveFileName = SaveManager.generateUniqueSaveName();
+        System.out.println("Novo jogo iniciado. Ficheiro de destino: " + this.currentSaveFileName);
+
         // Spawn at recommended location
         respawn();
 
@@ -125,6 +134,28 @@ public class PlayerAppState extends BaseAppState {
 
     @Override
     public void update(float tpf) {
+
+        // --- LÓGICA DE SAVE (Tecla M) ---
+        if (input.consumeSaveRequest()) {
+            performSave(this.currentSaveFileName); // Por agora salvamos sempre no "save1"
+        }
+
+        // --- LÓGICA DE LOAD MENU (Tecla L) ---
+        if (input.consumeLoadMenuRequest()) {
+            if (hud != null) {
+                hud.showLoadMenu(SaveManager.getSaveList());
+            }
+        }
+
+// --- LÓGICA DE CARREGAR SAVE ESPECÍFICO (F1, F2...) ---
+        int saveIndex = input.consumeLoadSelection();
+        if (saveIndex != -1) {
+            List<String> saves = SaveManager.getSaveList();
+            if (saveIndex < saves.size()) {
+                performLoad(saves.get(saveIndex));
+                if (hud != null) hud.hideLoadMenu();
+            }
+        }
         // respawn on request
         if (input.consumeRespawnRequested()) {
             if (world != null) spawnPosition = world.getRecommendedSpawnPosition();
@@ -254,6 +285,79 @@ public class PlayerAppState extends BaseAppState {
         // Dano Ambiental
         checkEnvironmentalDamage(tpf);
     }
+
+    private void performSave(String saveName) {
+        if (hud != null) hud.showSubtitle("A Gravar...", 2.0f);
+
+        GameSaveData data = new GameSaveData();
+
+        // 1. Jogador (Igual)
+        Vector3f pos = playerNode.getWorldTranslation();
+        data.playerX = pos.x; data.playerY = pos.y; data.playerZ = pos.z;
+        data.rotPitch = this.pitch; data.rotYaw = this.yaw;
+        data.health = player.getHealth();
+        data.hotbar = player.getHotbar();
+        data.mainInventory = player.getMainInventory();
+
+        // 2. Mundo (Igual)
+        if (world != null && world.getVoxelWorld() != null) {
+            world.getVoxelWorld().saveChunksToData(data);
+        }
+
+        // --- 3. NOVO: Salvar NPCs ---
+        NpcAppState npcState = getState(NpcAppState.class);
+        if (npcState != null) {
+            npcState.saveNpcsToData(data);
+        }
+
+        // Gravar no disco
+        SaveManager.saveGame(saveName, data);
+    }
+
+    private void performLoad(String saveName) {
+        System.out.println("A carregar save: " + saveName);
+
+        GameSaveData data = SaveManager.loadGame(saveName);
+        if (data == null) {
+            if (hud != null) hud.showSubtitle("Erro ao carregar!", 2.0f);
+            return;
+        }
+
+        this.currentSaveFileName = saveName;
+
+        // 1. Aplicar Jogador
+        characterControl.warp(new Vector3f(data.playerX, data.playerY, data.playerZ));
+        this.yaw = data.rotYaw;
+        this.pitch = data.rotPitch;
+
+        // --- CORREÇÃO HUD: Usar setHealth e atualizar HUD ---
+        player.setHealth(data.health); // Usa o novo método que criámos no passo 1
+        if (hud != null) {
+            hud.setHealth(player.getHealth()); // <--- FORÇA O UPDATE VISUAL DOS CORAÇÕES
+        }
+
+        // Restaurar inventário
+        if(data.hotbar != null) System.arraycopy(data.hotbar, 0, player.getHotbar(), 0, 9);
+        if(data.mainInventory != null) System.arraycopy(data.mainInventory, 0, player.getMainInventory(), 0, 27);
+
+        // 2. Aplicar Mundo
+        if (world != null && world.getVoxelWorld() != null) {
+            world.getVoxelWorld().loadChunksFromData(data);
+            world.getVoxelWorld().rebuildDirtyChunks(world.getPhysicsSpace());
+        }
+
+        // --- 3. NOVO: Carregar NPCs ---
+        NpcAppState npcState = getState(NpcAppState.class);
+        if (npcState != null) {
+            npcState.loadNpcsFromData(data);
+        }
+
+        if (hud != null) {
+            hud.updateInventoryDisplay(player);
+            hud.showSubtitle("Mundo Carregado: " + saveName, 3.0f);
+        }
+    }
+
 
     // --- DANO AMBIENTAL ---
     private void checkEnvironmentalDamage(float tpf) {

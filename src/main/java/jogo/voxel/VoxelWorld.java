@@ -18,6 +18,7 @@ import java.util.Random;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import jogo.system.GameSaveData;
 
 
 
@@ -39,6 +40,76 @@ public class VoxelWorld {
     private final int chunkSize = Chunk.SIZE;
     private final int chunkCountX, chunkCountY, chunkCountZ;
     private final Chunk[][][] chunks;
+
+    public void saveChunksToData(GameSaveData data) {
+        // Percorre todos os chunks
+        for (int cx = 0; cx < chunkCountX; cx++) {
+            for (int cy = 0; cy < chunkCountY; cy++) {
+                for (int cz = 0; cz < chunkCountZ; cz++) {
+                    Chunk c = chunks[cx][cy][cz];
+                    // Cria uma cópia dos dados do chunk
+                    byte[][][] chunkData = new byte[Chunk.SIZE][Chunk.SIZE][Chunk.SIZE];
+                    boolean hasBlocks = false;
+
+                    for(int x=0; x<Chunk.SIZE; x++){
+                        for(int y=0; y<Chunk.SIZE; y++){
+                            for(int z=0; z<Chunk.SIZE; z++){
+                                byte b = c.get(x,y,z);
+                                chunkData[x][y][z] = b;
+                                if(b != VoxelPalette.AIR_ID) hasBlocks = true;
+                            }
+                        }
+                    }
+
+                    // Só salvamos se o chunk não estiver vazio (otimização básica)
+                    if (hasBlocks) {
+                        String key = cx + "," + cy + "," + cz;
+                        data.modifiedChunks.put(key, chunkData);
+                    }
+                }
+            }
+        }
+    }
+
+    public void loadChunksFromData(GameSaveData data) {
+        if (data.modifiedChunks == null) return;
+
+        // Limpar mundo atual (encher de ar)
+        for (int cx = 0; cx < chunkCountX; cx++) {
+            for (int cy = 0; cy < chunkCountY; cy++) {
+                for (int cz = 0; cz < chunkCountZ; cz++) {
+                    Chunk c = chunks[cx][cy][cz];
+                    for (int x = 0; x < Chunk.SIZE; x++)
+                        for (int y = 0; y < Chunk.SIZE; y++)
+                            for (int z = 0; z < Chunk.SIZE; z++)
+                                c.set(x, y, z, VoxelPalette.AIR_ID);
+                    c.markDirty();
+                }
+            }
+        }
+
+        // Aplicar dados do save
+        for (Map.Entry<String, byte[][][]> entry : data.modifiedChunks.entrySet()) {
+            String[] parts = entry.getKey().split(",");
+            int cx = Integer.parseInt(parts[0]);
+            int cy = Integer.parseInt(parts[1]);
+            int cz = Integer.parseInt(parts[2]);
+
+            if (cx >= 0 && cx < chunkCountX && cy >= 0 && cy < chunkCountY && cz >= 0 && cz < chunkCountZ) {
+                Chunk c = chunks[cx][cy][cz];
+                byte[][][] savedVoxels = entry.getValue();
+
+                for (int x = 0; x < Chunk.SIZE; x++) {
+                    for (int y = 0; y < Chunk.SIZE; y++) {
+                        for (int z = 0; z < Chunk.SIZE; z++) {
+                            c.set(x, y, z, savedVoxels[x][y][z]);
+                        }
+                    }
+                }
+                c.markDirty();
+            }
+        }
+    }
 
     public VoxelWorld(AssetManager assetManager, int sizeX, int sizeY, int sizeZ) {
         this.assetManager = assetManager;

@@ -19,10 +19,9 @@ import jogo.gameobject.character.Wolf;
 import jogo.gameobject.character.Trader;
 import jogo.voxel.VoxelWorld;
 import jogo.voxel.VoxelPalette;
+import jogo.system.GameSaveData;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 public class NpcAppState extends BaseAppState {
 
@@ -258,6 +257,72 @@ public class NpcAppState extends BaseAppState {
         control.warp(new Vector3f(p.x, p.y, p.z));
 
         npcControls.put(npc, control);
+    }
+
+    // --- SISTEMA DE SAVE/LOAD DE NPCs ---
+
+    public void saveNpcsToData(jogo.system.GameSaveData data) {
+        data.npcs.clear();
+        // Percorrer todos os NPCs controlados por este estado
+        for (Character npc : npcControls.keySet()) {
+            if (npc.isDead()) continue; // Não guardamos mortos
+
+            String type = "";
+            if (npc instanceof Sheep) type = "Sheep";
+            else if (npc instanceof Zombie) type = "Zombie";
+            else if (npc instanceof Wolf) type = "Wolf";
+            else if (npc instanceof Trader) type = "Trader";
+
+            if (!type.isEmpty()) {
+                Vec3 p = npc.getPosition();
+                data.npcs.add(new jogo.system.GameSaveData.NpcData(
+                        type, p.x, p.y, p.z, npc.getHealth()
+                ));
+            }
+        }
+    }
+
+    public void loadNpcsFromData(jogo.system.GameSaveData data) {
+        // 1. Limpar NPCs atuais (matar/remover todos)
+        // Criar cópia da lista para evitar erros de concorrência ao remover
+        List<Character> toRemove = new ArrayList<>(npcControls.keySet());
+        for (Character npc : toRemove) {
+            // Remover da física
+            BetterCharacterControl ctrl = npcControls.get(npc);
+            if (ctrl != null) physicsSpace.remove(ctrl);
+
+            // Remover visual (RenderAppState tratará disto se removermos do registry)
+            // Remover do Registo do jogo
+            registry.remove(npc);
+        }
+        npcControls.clear();
+        attackCooldowns.clear();
+        wanderTimers.clear();
+
+        // 2. Recriar NPCs a partir do save
+        if (data.npcs == null) return;
+
+        for (jogo.system.GameSaveData.NpcData npcData : data.npcs) {
+            Character newNpc = null;
+
+            switch (npcData.type) {
+                case "Sheep" -> newNpc = new Sheep();
+                case "Zombie" -> newNpc = new Zombie();
+                case "Wolf" -> newNpc = new Wolf();
+                case "Trader" -> newNpc = new Trader();
+            }
+
+            if (newNpc != null) {
+                newNpc.setPosition(npcData.x, npcData.y, npcData.z);
+                newNpc.setHealth(npcData.health);
+
+                // Adicionar ao registo (o NpcAppState vai detetar no próximo update e criar física)
+                registry.add(newNpc);
+
+                // Forçar criação imediata de física para não cair no vazio no primeiro frame
+                createPhysicsFor(newNpc);
+            }
+        }
     }
 
     @Override

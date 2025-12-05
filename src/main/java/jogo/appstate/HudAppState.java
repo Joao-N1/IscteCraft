@@ -89,6 +89,9 @@ public class HudAppState extends BaseAppState {
     private float subtitleTimer = 0f;
     // ----------------------------------
 
+    private Node loadMenuNode = new Node("LoadMenu");
+    private BitmapText loadMenuText;
+
     public HudAppState(Node guiNode, AssetManager assetManager) {
         this.guiNode = guiNode;
         this.assetManager = assetManager;
@@ -144,11 +147,53 @@ public class HudAppState extends BaseAppState {
         guiNode.attachChild(subtitleText);
         // -------------------------------
 
+        loadMenuText = new BitmapText(guiFont, false);
+        loadMenuText.setSize(guiFont.getCharSet().getRenderedSize() * 1.5f);
+        loadMenuText.setColor(ColorRGBA.Green);
+        loadMenuText.setText("SAVES DISPONIVEIS:\n(F1) save1\n(F2) save2");
+        loadMenuText.setLocalTranslation(50, 600, 0); // Posição no ecrã
+        loadMenuNode.attachChild(loadMenuText);
+
         refreshLayout();
         System.out.println("HudAppState initialized.");
     }
 
     // --- INICIALIZAÇÃO UI BÁSICA ---
+
+    // Substitui o método showLoadMenu por este melhorado:
+
+    public void showLoadMenu(List<String> saves) {
+        StringBuilder sb = new StringBuilder("=== MENU DE LOAD ===\n\n");
+
+        if (saves.isEmpty()) {
+            sb.append("Nenhum save encontrado.\nJoga e carrega em 'M' para salvar.");
+        } else {
+            sb.append("Seleciona um mundo com F1, F2, F3...\n\n");
+            for (int i = 0; i < saves.size(); i++) {
+                // Limitar a visualização a 9 saves para não sair do ecrã
+                if (i >= 9) {
+                    sb.append("... (mais saves ocultos)");
+                    break;
+                }
+                sb.append("[F").append(i + 1).append("]  ").append(saves.get(i)).append("\n");
+            }
+        }
+
+        // Adicionar fundo escuro ao texto para melhor leitura (opcional, se quiseres usar o recipeBookBg)
+        loadMenuText.setText(sb.toString());
+
+        // Centrar no ecrã
+        SimpleApplication sapp = (SimpleApplication) getApplication();
+        float x = 50;
+        float y = sapp.getCamera().getHeight() - 100;
+        loadMenuText.setLocalTranslation(x, y, 0);
+
+        guiNode.attachChild(loadMenuNode);
+    }
+
+    public void hideLoadMenu() {
+        loadMenuNode.removeFromParent();
+    }
 
     private void initHotbar(Application app) {
         float slotWidth = HOTBAR_WIDTH / 9f;
@@ -500,7 +545,7 @@ public class HudAppState extends BaseAppState {
 
     // --- VISUALIZADORES ---
 
-    private void updateInventoryDisplay(Player player) {
+    public void updateInventoryDisplay(Player player) {
         updateSlotList(player.getHotbar(), hotbarSlots, hotbarIcons, hotbarTexts);
         if (isInventoryVisible) {
             updateSlotList(player.getMainInventory(), mainInvSlots, mainInvIcons, mainInvTexts);

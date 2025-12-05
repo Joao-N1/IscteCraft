@@ -14,6 +14,18 @@ public abstract class Character extends GameObject {
         this.health = 100;
     }
 
+    // ... métodos existentes ...
+
+    public void setHealth(int health) {
+        this.health = health;
+        if (this.health <= 0) {
+            this.health = 0;
+            this.isDead = true;
+        } else {
+            this.isDead = false;
+        }
+    }
+
     public void setMaxHealth(int max) {
         this.maxHealth = max;
         this.health = max; // Começa com vida cheia

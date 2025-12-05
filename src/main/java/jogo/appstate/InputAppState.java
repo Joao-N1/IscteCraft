@@ -29,6 +29,10 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
     private volatile boolean useRequested;
     private volatile boolean uiClickRequested;
     private volatile boolean dropRequested;
+    // Adicionar variáveis booleanas na classe:
+    private volatile boolean saveRequested;
+    private volatile boolean loadMenuRequested;
+    private volatile int loadSelection = -1; // -1 = nada
 
     @Override
     protected void initialize(Application app) {
@@ -74,6 +78,16 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
         // 2. MAPEAMENTO DO G
         im.addMapping("DropItem", new KeyTrigger(KeyInput.KEY_G));
         im.addListener(this, "DropItem");
+
+        im.addMapping("SaveGame", new KeyTrigger(KeyInput.KEY_M));
+        im.addMapping("LoadMenu", new KeyTrigger(KeyInput.KEY_L));
+// ... nos mapeamentos de LoadMenu, para selecionar saves
+        im.addMapping("SelectSave1", new KeyTrigger(KeyInput.KEY_F1));
+        im.addMapping("SelectSave2", new KeyTrigger(KeyInput.KEY_F2));
+        im.addMapping("SelectSave3", new KeyTrigger(KeyInput.KEY_F3));
+
+        im.addListener(this, "SaveGame", "LoadMenu", "SelectSave1", "SelectSave2", "SelectSave3");
+
     }
 
     @Override
@@ -156,7 +170,40 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
                 }
             }
 
+            case "SaveGame" -> {
+                if (isPressed) saveRequested = true;
+            }
+            case "LoadMenu" -> {
+                if (isPressed) loadMenuRequested = true;
+            }
+            case "SelectSave1" -> {
+                if (isPressed) loadSelection = 0;
+            }
+            case "SelectSave2" -> {
+                if (isPressed) loadSelection = 1;
+            }
+            case "SelectSave3" -> {
+                if (isPressed) loadSelection = 2;
+            }
+
         }
+    }
+
+    // Adicionar métodos getters/consumidores:
+    public boolean consumeSaveRequest() {
+        boolean r = saveRequested;
+        saveRequested = false;
+        return r;
+    }
+    public boolean consumeLoadMenuRequest() {
+        boolean r = loadMenuRequested;
+        loadMenuRequested = false;
+        return r;
+    }
+    public int consumeLoadSelection() {
+        int r = loadSelection;
+        loadSelection = -1;
+        return r;
     }
 
     // --- NOVOS MÉTODOS PARA CONSUMIR INPUT ---
