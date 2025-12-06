@@ -92,6 +92,9 @@ public class HudAppState extends BaseAppState {
     private Node loadMenuNode = new Node("LoadMenu");
     private BitmapText loadMenuText;
 
+    private BitmapText miniGameText;
+    private BitmapText highScoreText;
+
     public HudAppState(Node guiNode, AssetManager assetManager) {
         this.guiNode = guiNode;
         this.assetManager = assetManager;
@@ -154,8 +157,38 @@ public class HudAppState extends BaseAppState {
         loadMenuText.setLocalTranslation(50, 600, 0); // Posição no ecrã
         loadMenuNode.attachChild(loadMenuText);
 
+        miniGameText = new BitmapText(guiFont, false);
+        miniGameText.setSize(guiFont.getCharSet().getRenderedSize());
+        miniGameText.setColor(ColorRGBA.Cyan);
+        miniGameText.setLocalTranslation(10, 700, 0); // Topo esquerdo
+        guiNode.attachChild(miniGameText);
+
+        highScoreText = new BitmapText(guiFont, false);
+        highScoreText.setSize(guiFont.getCharSet().getRenderedSize() * 1.5f);
+        highScoreText.setColor(ColorRGBA.Yellow);
+        highScoreText.setLocalTranslation(400, 500, 0); // Centro (aprox)
+        // Não anexar ainda
+
         refreshLayout();
         System.out.println("HudAppState initialized.");
+    }
+
+    // Novos Métodos
+    public void updateMiniGameInfo(float time, int hits, int total) {
+        miniGameText.setText(String.format("Tempo: %.1fs | Alvos: %d/%d", time, hits, total));
+    }
+
+    public void showHighScores(List<jogo.system.HighScoreManager.ScoreEntry> scores, float currentTime) {
+        StringBuilder sb = new StringBuilder("PARABÉNS! TERMINASTE EM " + String.format("%.2f", currentTime) + "s\n\n");
+        sb.append("=== TOP SCORES ===\n");
+
+        int pos = 1;
+        for (jogo.system.HighScoreManager.ScoreEntry s : scores) {
+            sb.append(pos++).append(". ").append(s.toString()).append("\n");
+        }
+
+        highScoreText.setText(sb.toString());
+        guiNode.attachChild(highScoreText);
     }
 
     // --- INICIALIZAÇÃO UI BÁSICA ---

@@ -40,15 +40,16 @@ public class VoxelPalette {
         p.register(new CraftingTableBlockType()); // 13
         p.register(new SandBlockType());       // 14
         p.register(new WaterBlockType());      // 15
+        p.register(new TargetBlockType());     // ID 16
 
         // Novos Itens
-        p.register(new CoalItemBlockType());   // 16
-        p.register(new IronItemBlockType());   // 17
-        p.register(new LanternOffBlockType()); // 18
-        p.register(new LanternOnBlockType());  // 19
-        p.register(new WoodPickBlockType());   // 20
-        p.register(new StonePickBlockType());  // 21
-        p.register(new IronPickBlockType());   // 22
+        p.register(new CoalItemBlockType());   // 17
+        p.register(new IronItemBlockType());   // 18
+        p.register(new LanternOffBlockType()); // 19
+        p.register(new LanternOnBlockType());  // 20
+        p.register(new WoodPickBlockType());   // 21
+        p.register(new StonePickBlockType());  // 22
+        p.register(new IronPickBlockType());   // 23
 
         return p;
     }
@@ -70,12 +71,14 @@ public class VoxelPalette {
     public static final byte CRAFTING_TABLE_ID = 13;
     public static final byte SAND_ID = 14;
     public static final byte WATER_ID = 15;
+    public static final byte TARGET_ID = 16;
 
-    public static final byte COAL_MAT_ID = 16;
-    public static final byte IRON_MAT_ID = 17;
-    public static final byte LANTERN_OFF_ID = 18;
-    public static final byte LANTERN_ON_ID = 19;
-    public static final byte WOOD_PICK_ID = 20;
-    public static final byte STONE_PICK_ID = 21;
-    public static final byte IRON_PICK_ID = 22;
+
+    public static final byte COAL_MAT_ID = 17;
+    public static final byte IRON_MAT_ID = 18;
+    public static final byte LANTERN_OFF_ID = 19;
+    public static final byte LANTERN_ON_ID = 20;
+    public static final byte WOOD_PICK_ID = 21;
+    public static final byte STONE_PICK_ID = 22;
+    public static final byte IRON_PICK_ID = 23;
 }

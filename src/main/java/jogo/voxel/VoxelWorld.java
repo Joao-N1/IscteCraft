@@ -336,8 +336,42 @@ public class VoxelWorld {
                 }
             }
         }
+        generateTargets(seed);
+        System.out.println("Alvos gerados!");
 
         System.out.println("Terreno gerado com limites ajustados (Água Nível 14)!");
+    }
+
+    private void generateTargets(long seed) {
+        Random random = new Random(seed + 555);
+        int targetCount = 20; // Número de alvos desejados
+        int placed = 0;
+
+        // Tentativas de segurança para não loopar infinitamente
+        for (int i = 0; i < 1000 && placed < targetCount; i++) {
+            int x = random.nextInt(sizeX - 4) + 2;
+            int z = random.nextInt(sizeZ - 4) + 2;
+
+            // Encontrar altura do solo
+            int y = getTopSolidY(x, z);
+
+            if (y > 0 && y < sizeY - 5) {
+                // Estratégia mista:
+                int type = random.nextInt(3);
+
+                if (type == 0) {
+                    // 1. Chão (em cima da relva)
+                    setBlock(x, y + 1, z, VoxelPalette.TARGET_ID);
+                    placed++;
+                } else if (type == 1) {
+                    // 2. Ar (flutuante, 3-5 blocos acima)
+                    setBlock(x, y + 3 + random.nextInt(3), z, VoxelPalette.TARGET_ID);
+                    placed++;
+                }
+                // Opcional: Cavernas requereria lógica mais complexa de procura de buracos
+            }
+        }
+        System.out.println("Alvos colocados: " + placed);
     }
 
 
