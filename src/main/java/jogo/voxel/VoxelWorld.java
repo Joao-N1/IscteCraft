@@ -659,7 +659,7 @@ public class VoxelWorld {
         // Nota: Representa o número de "tentativas". O valor real de filões criados será menor,
         // pois tentativas que caiam em Ar (cavernas) ou Terra são ignoradas.
         int coalAttempts = 2400;    // Carvão: Comum
-        int ironAttempts = 1600;    // Ferro: Médio
+        int ironAttempts = 3000;    // Ferro: Médio
         int diamondAttempts = 800;  // Diamante: Raro
 
         // --- GERAR CARVÃO ---

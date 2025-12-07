@@ -340,6 +340,9 @@ public class HudAppState extends BaseAppState {
         Recipe rSpikyPlanks = new Recipe("Spiky Planks", VoxelPalette.SpikyWood_ID, 1, VoxelPalette.SPIKY_PLANKS_ID, 4);
         Recipe rSpikySword = new Recipe("Spiky Sword", VoxelPalette.SPIKY_PLANKS_ID, 2, VoxelPalette.SWORD_ID, 1);
 
+        Recipe rLantern = new Recipe("Lantern", VoxelPalette.IRON_MAT_ID, 8, VoxelPalette.LANTERN_OFF_ID, 1);
+
+
         // Jogador (Inventário normal)
         playerRecipes.add(rPlanks);
         playerRecipes.add(rTable);
@@ -356,8 +359,9 @@ public class HudAppState extends BaseAppState {
         tableRecipes.add(rSticks);
         tableRecipes.add(rSpikyPlanks);
         tableRecipes.add(rSpikySword);
+        tableRecipes.add(rLantern);
+        tableRecipes.add(rTable);
 
-        // tableRecipes.add(rTable);
         createRecipeIcons(tableRecipes, tableRecipeIcons, craftingTableNode);
     }
 
@@ -755,6 +759,8 @@ public class HudAppState extends BaseAppState {
         // NOVAS TEXTURAS
         if (id == VoxelPalette.SPIKY_PLANKS_ID) return "SpikyPlankBlock.png";
         if (id == VoxelPalette.SWORD_ID) return "Sword.png";
+        if (id == VoxelPalette.LANTERN_OFF_ID) return "LanternOff.png";
+        if (id == VoxelPalette.LANTERN_ON_ID) return "LanternOn.png";
 
         // Fallback (Padrão)
         return "DirtBlock.png";
@@ -891,16 +897,18 @@ public class HudAppState extends BaseAppState {
             float gridStartX = (TABLE_WIDTH / 2f) - 101f;
             float gridStartY = PANEL_HEIGHT - 113f;
             float gridSize = 30f;
-            float gap = 8f;
+
+            float gapX = 8f;
+            float gapY = 14f;
 
             for (int i = 0; i < 9; i++) {
                 int r = i / 3; int c = i % 3;
-                float gx = gridStartX + c * (gridSize + gap);
-                float gy = gridStartY - r * (gridSize + gap);
+                float gx = gridStartX + c * (gridSize + gapX);
+                float gy = gridStartY - r * (gridSize + gapY);
                 gridInputIcons.get(i).setPosition(gx, gy);
             }
-            float resX = gridStartX + 3 * (gridSize + gap) + 45f;
-            float resY = gridStartY - (gridSize + gap);
+            float resX = gridStartX + 3 * (gridSize + gapX) + 45f;
+            float resY = gridStartY - (gridSize + gapY) - 15f;
             resultIcon.setPosition(resX, resY);
 
             // Grelha do Livro

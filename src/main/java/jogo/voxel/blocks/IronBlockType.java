@@ -30,7 +30,7 @@ public class IronBlockType extends VoxelBlockType {
 
     @Override
     public float getHardness() {
-        return 10.50f;
+        return 8.0f;
     }
 
     @Override

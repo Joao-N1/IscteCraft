@@ -135,6 +135,20 @@ public class InteractionAppState extends BaseAppState {
                         jogo.appstate.HudAppState hud = getState(jogo.appstate.HudAppState.class);
                         if (hud != null) hud.openCraftingTable();
                     }
+
+                    // --- NOVO: LANTERNA (Ligar/Desligar) ---
+                    else if (blockId == jogo.voxel.VoxelPalette.LANTERN_OFF_ID) {
+                        // Se está apagada, substitui pelo bloco ACESO
+                        vw.setBlock(cell.x, cell.y, cell.z, jogo.voxel.VoxelPalette.LANTERN_ON_ID);
+                        vw.rebuildDirtyChunks(world.getPhysicsSpace());
+                        // Som opcional (reutiliza o do Trader por agora ou adiciona um "click")
+                        // playSound("Sounds/Click.wav");
+                    }
+                    else if (blockId == jogo.voxel.VoxelPalette.LANTERN_ON_ID) {
+                        // Se está acesa, substitui pelo bloco APAGADO
+                        vw.setBlock(cell.x, cell.y, cell.z, jogo.voxel.VoxelPalette.LANTERN_OFF_ID);
+                        vw.rebuildDirtyChunks(world.getPhysicsSpace());
+                    }
                 });
             }
         }

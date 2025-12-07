@@ -27,6 +27,6 @@ public class StoneBlockType extends VoxelBlockType {
 
     @Override
     public float getHardness() {
-        return 9.0f;
+        return 6.0f;
     }
 }

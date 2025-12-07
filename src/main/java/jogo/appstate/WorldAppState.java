@@ -76,7 +76,7 @@ public class WorldAppState extends BaseAppState {
 
         // Lighting
         AmbientLight ambient = new AmbientLight();
-        ambient.setColor(ColorRGBA.White.mult(0.60f));
+        ambient.setColor(ColorRGBA.White.mult(0.05f));
         worldNode.addLight(ambient);
 
         DirectionalLight sun = new DirectionalLight();
@@ -175,11 +175,20 @@ public class WorldAppState extends BaseAppState {
                     System.out.println("Bloco partido: " + blockType.getName());
 
                     // --- CORREÇÃO DO DROP ---
+                    // Verificar se o bloco define um drop específico (ex: Minério de Ferro -> Item Ferro)
+                    byte dropId = blockType.getDropItem();
+
+                    // Se getDropItem() devolver 0, significa que dropa o próprio bloco (comportamento padrão)
+                    if (dropId == 0) {
+                        dropId = blockId;
+                    }
+
+                    // --- CORREÇÃO DO DROP ---
                     // Em vez de dar diretamente ao jogador, atiramos para o chão!
                     spawnDroppedItem(
                             new Vector3f(currentTarget.x + 0.5f, currentTarget.y + 0.5f, currentTarget.z + 0.5f),
                             new Vector3f(0, 3f, 0), // Salta um bocadinho para cima
-                            new ItemStack(blockId, 1)
+                            new ItemStack(dropId, 1)
                     );
                     // ------------------------
                 }

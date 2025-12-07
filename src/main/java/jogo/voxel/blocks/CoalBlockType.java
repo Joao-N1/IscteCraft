@@ -27,7 +27,7 @@ public class CoalBlockType extends VoxelBlockType {
 
     @Override
     public float getHardness() {
-        return 9.0f;
+        return 7.0f;
     }
 
     @Override
