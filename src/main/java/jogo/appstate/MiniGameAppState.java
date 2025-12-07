@@ -104,18 +104,43 @@ public class MiniGameAppState extends BaseAppState {
         return false;
     }
 
+    // ... código existente ...
+
     private void finishGame() {
         gameRunning = false;
         System.out.println("JOGO TERMINADO! Tempo: " + timer);
 
         // Guardar High Score
-        // (Aqui podes pedir o nome ao jogador, por agora usamos "Player")
         scoreManager.addScore("Player", timer);
 
-        // Mostrar High Scores no HUD
+        // Mostrar High Scores no HUD por 15 SEGUNDOS
         if (hudState != null) {
-            hudState.showHighScores(scoreManager.getTopScores(), timer);
+            String msg = "DESAFIO COMPLETADO!\nTempo Final: " + String.format("%.2f", timer) + "s";
+            // Passamos 15.0f como duração
+            hudState.showLeaderboard(scoreManager.getTopScores(), 15.0f, msg);
         }
+    }
+
+    // Chamado quando fazes Save
+    public void saveStateToData(jogo.system.GameSaveData data) {
+        data.miniGameTimer = this.timer;
+        data.miniGameTargetsHit = this.targetsHit;
+        data.miniGameRunning = this.gameRunning;
+    }
+
+    // Chamado quando fazes Load
+    public void loadStateFromData(jogo.system.GameSaveData data) {
+        this.timer = data.miniGameTimer;
+        this.targetsHit = data.miniGameTargetsHit;
+        this.gameRunning = data.miniGameRunning;
+
+        // Se o jogo estava a correr (ou terminado), atualizamos o HUD imediatamente
+        // para não mostrar "0/20" incorretamente por um frame
+        if (hudState != null) {
+            hudState.updateMiniGameInfo(timer, targetsHit, TOTAL_TARGETS);
+        }
+
+        System.out.println("Minijogo carregado: " + targetsHit + " alvos, " + timer + "s");
     }
 
     @Override protected void cleanup(Application app) {}

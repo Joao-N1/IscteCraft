@@ -10,6 +10,11 @@ import java.util.Map;
 public class GameSaveData implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    // --- DADOS DO MINIJOGO ---
+    public float miniGameTimer = 0f;
+    public int miniGameTargetsHit = 0;
+    public boolean miniGameRunning = false;
+
     // --- Dados do Jogador ---
     public float playerX, playerY, playerZ;
     public float rotYaw, rotPitch;

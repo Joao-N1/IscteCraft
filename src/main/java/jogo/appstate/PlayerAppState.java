@@ -22,6 +22,7 @@ import com.jme3.audio.AudioData;
 import jogo.system.GameSaveData;
 import jogo.system.SaveManager;
 import jogo.voxel.Chunk;
+import jogo.system.HighScoreManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -135,15 +136,34 @@ public class PlayerAppState extends BaseAppState {
     @Override
     public void update(float tpf) {
 
+        if (input.consumeLeaderboardRequest()) {
+            if (hud != null) {
+                if (hud.isLeaderboardVisible()) {
+                    // Se já estiver visível, esconde
+                    hud.hideLeaderboard();
+                } else {
+                    // Se estiver escondido, carrega e mostra (sem tempo limite = 0f)
+                    // Criamos uma instância temporária só para ler os scores globais
+                    HighScoreManager tempManager = new HighScoreManager();
+                    hud.showLeaderboard(tempManager.getTopScores(), 0f, "--- CLASSIFICACAO GLOBAL ---");
+                }
+            }
+        }
+
         // --- LÓGICA DE SAVE (Tecla M) ---
         if (input.consumeSaveRequest()) {
             performSave(this.currentSaveFileName); // Por agora salvamos sempre no "save1"
         }
 
-        // --- LÓGICA DE LOAD MENU (Tecla L) ---
+        // --- LÓGICA DE CARREGAR (Tecla L) ---
         if (input.consumeLoadMenuRequest()) {
             if (hud != null) {
-                hud.showLoadMenu(SaveManager.getSaveList());
+                // LÓGICA DE TOGGLE
+                if (hud.isLoadMenuVisible()) {
+                    hud.hideLoadMenu();
+                } else {
+                    hud.showLoadMenu(jogo.system.SaveManager.getSaveList());
+                }
             }
         }
 
@@ -310,6 +330,12 @@ public class PlayerAppState extends BaseAppState {
             npcState.saveNpcsToData(data);
         }
 
+        // --- 4. MINIJOGO (NOVO) ---
+        MiniGameAppState miniGame = getState(MiniGameAppState.class);
+        if (miniGame != null) {
+            miniGame.saveStateToData(data);
+        }
+
         // Gravar no disco
         SaveManager.saveGame(saveName, data);
     }
@@ -325,36 +351,38 @@ public class PlayerAppState extends BaseAppState {
 
         this.currentSaveFileName = saveName;
 
-        // 1. Aplicar Jogador
+        // 1. Jogador (Update Posição e Inventário) ...
         characterControl.warp(new Vector3f(data.playerX, data.playerY, data.playerZ));
         this.yaw = data.rotYaw;
         this.pitch = data.rotPitch;
+        player.setHealth(data.health);
+        if (hud != null) hud.setHealth(player.getHealth());
 
-        // --- CORREÇÃO HUD: Usar setHealth e atualizar HUD ---
-        player.setHealth(data.health); // Usa o novo método que criámos no passo 1
-        if (hud != null) {
-            hud.setHealth(player.getHealth()); // <--- FORÇA O UPDATE VISUAL DOS CORAÇÕES
-        }
-
-        // Restaurar inventário
         if(data.hotbar != null) System.arraycopy(data.hotbar, 0, player.getHotbar(), 0, 9);
         if(data.mainInventory != null) System.arraycopy(data.mainInventory, 0, player.getMainInventory(), 0, 27);
 
-        // 2. Aplicar Mundo
+        // 2. Mundo ...
         if (world != null && world.getVoxelWorld() != null) {
             world.getVoxelWorld().loadChunksFromData(data);
             world.getVoxelWorld().rebuildDirtyChunks(world.getPhysicsSpace());
         }
 
-        // --- 3. NOVO: Carregar NPCs ---
+        // 3. NPCs ...
         NpcAppState npcState = getState(NpcAppState.class);
-        if (npcState != null) {
-            npcState.loadNpcsFromData(data);
+        if (npcState != null) npcState.loadNpcsFromData(data);
+
+        // --- 4. MINIJOGO (NOVO) ---
+        MiniGameAppState miniGame = getState(MiniGameAppState.class);
+        if (miniGame != null) {
+            miniGame.loadStateFromData(data);
         }
 
         if (hud != null) {
             hud.updateInventoryDisplay(player);
             hud.showSubtitle("Mundo Carregado: " + saveName, 3.0f);
+
+            // Se o menu de load estiver aberto, fecha-o automaticamente após carregar
+            if (hud.isLoadMenuVisible()) hud.hideLoadMenu();
         }
     }
 

@@ -95,6 +95,11 @@ public class HudAppState extends BaseAppState {
     private BitmapText miniGameText;
     private BitmapText highScoreText;
 
+    // --- LEADERBOARD / SUCCESS MSG ---
+    private Node leaderboardNode = new Node("LeaderboardNode");
+    private float leaderboardTimer = 0f; // Temporizador para auto-hide
+    private boolean isLeaderboardVisible = false; // Estado atual
+
     public HudAppState(Node guiNode, AssetManager assetManager) {
         this.guiNode = guiNode;
         this.assetManager = assetManager;
@@ -163,11 +168,13 @@ public class HudAppState extends BaseAppState {
         miniGameText.setLocalTranslation(10, 700, 0); // Topo esquerdo
         guiNode.attachChild(miniGameText);
 
+
+        // Inicializar Texto do Leaderboard (mas não anexar ainda)
         highScoreText = new BitmapText(guiFont, false);
-        highScoreText.setSize(guiFont.getCharSet().getRenderedSize() * 1.5f);
+        highScoreText.setSize(guiFont.getCharSet().getRenderedSize() * 1.2f);
         highScoreText.setColor(ColorRGBA.Yellow);
         highScoreText.setLocalTranslation(400, 500, 0); // Centro (aprox)
-        // Não anexar ainda
+        leaderboardNode.attachChild(highScoreText);
 
         refreshLayout();
         System.out.println("HudAppState initialized.");
@@ -222,6 +229,10 @@ public class HudAppState extends BaseAppState {
         loadMenuText.setLocalTranslation(x, y, 0);
 
         guiNode.attachChild(loadMenuNode);
+    }
+
+    public boolean isLoadMenuVisible() {
+        return loadMenuNode.getParent() != null;
     }
 
     public void hideLoadMenu() {
@@ -410,6 +421,15 @@ public class HudAppState extends BaseAppState {
         centerCrosshair();
         refreshLayout();
 
+        // --- LÓGICA DO TIMER DO LEADERBOARD ---
+        if (leaderboardTimer > 0) {
+            leaderboardTimer -= tpf;
+            if (leaderboardTimer <= 0) {
+                // O tempo acabou, esconder!
+                hideLeaderboard();
+            }
+        }
+
         // --- LÓGICA DE TEMPO DA LEGENDA ---
         if (subtitleTimer > 0) {
             subtitleTimer -= tpf;
@@ -446,6 +466,48 @@ public class HudAppState extends BaseAppState {
             }
         }
     }
+
+    public void showLeaderboard(List<jogo.system.HighScoreManager.ScoreEntry> scores, float duration, String headerMsg) {
+        StringBuilder sb = new StringBuilder(headerMsg + "\n\n");
+        sb.append("=== TOP SCORES ===\n");
+
+        if (scores.isEmpty()) {
+            sb.append("(Ainda sem registos)");
+        } else {
+            int pos = 1;
+            for (jogo.system.HighScoreManager.ScoreEntry s : scores) {
+                sb.append(pos++).append(". ").append(s.toString()).append("\n");
+            }
+        }
+
+        highScoreText.setText(sb.toString());
+
+        // Centralizar no ecrã
+        float w = getApplication().getCamera().getWidth();
+        float h = getApplication().getCamera().getHeight();
+        float x = (w - highScoreText.getLineWidth()) / 2f;
+        float y = h * 0.75f;
+        highScoreText.setLocalTranslation(x, y, 0);
+
+        // Mostrar
+        if (leaderboardNode.getParent() == null) {
+            guiNode.attachChild(leaderboardNode);
+        }
+
+        this.leaderboardTimer = duration; // Define o temporizador (pode ser 0 para infinito)
+        this.isLeaderboardVisible = true;
+    }
+
+    public void hideLeaderboard() {
+        leaderboardNode.removeFromParent();
+        isLeaderboardVisible = false;
+        leaderboardTimer = 0f;
+    }
+
+    public boolean isLeaderboardVisible() {
+        return isLeaderboardVisible;
+    }
+
 
     // --- LÓGICA DE INTERAÇÃO ---
 

@@ -33,6 +33,7 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
     private volatile boolean saveRequested;
     private volatile boolean loadMenuRequested;
     private volatile int loadSelection = -1; // -1 = nada
+    private volatile boolean leaderboardRequested;
 
     @Override
     protected void initialize(Application app) {
@@ -87,6 +88,9 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
         im.addMapping("SelectSave3", new KeyTrigger(KeyInput.KEY_F3));
 
         im.addListener(this, "SaveGame", "LoadMenu", "SelectSave1", "SelectSave2", "SelectSave3");
+
+        im.addMapping("Leaderboard", new KeyTrigger(KeyInput.KEY_P));
+        im.addListener(this, "Leaderboard");
 
     }
 
@@ -185,8 +189,16 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
             case "SelectSave3" -> {
                 if (isPressed) loadSelection = 2;
             }
-
+            case "Leaderboard" -> {
+                if (isPressed) leaderboardRequested = true;
+            }
         }
+    }
+
+    public boolean consumeLeaderboardRequest() {
+        boolean r = leaderboardRequested;
+        leaderboardRequested = false;
+        return r;
     }
 
     // Adicionar métodos getters/consumidores:
