@@ -1,6 +1,7 @@
 package jogo.crafting;
 
 import jogo.gameobject.character.Player;
+import jogo.gameobject.item.ItemStack;
 import jogo.voxel.VoxelPalette;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,7 +9,7 @@ import java.util.List;
 
 /**
  * Gere as receitas e a lógica de criar itens.
- * Desacoplado da interface gráfica.
+ * Agora suporta receitas com múltiplos ingredientes.
  */
 public class CraftingManager {
 
@@ -19,12 +20,17 @@ public class CraftingManager {
     }
 
     private void initRecipes() {
-        // Aqui defines todas as receitas do jogo num só lugar
+        // --- RECEITAS BÁSICAS ---
+
         // 1 Madeira -> 4 Tábuas
-        recipes.add(new Recipe("Planks", VoxelPalette.Wood_ID, 1, VoxelPalette.PLANKS_ID, 4, 4));
+        recipes.add(new Recipe("Planks", VoxelPalette.Wood_ID, 1, VoxelPalette.PLANKS_ID, 4));
 
         // 2 Tábuas -> 4 Paus
-        recipes.add(new Recipe("Sticks", VoxelPalette.PLANKS_ID, 2, VoxelPalette.STICK_ID, 4, 4, 7));
+        recipes.add(new Recipe("Sticks", VoxelPalette.PLANKS_ID, 2, VoxelPalette.STICK_ID, 4));
+
+        // 4 Tábuas -> 1 Mesa de Trabalho
+        recipes.add(new Recipe("Table", VoxelPalette.PLANKS_ID, 4, VoxelPalette.CRAFTING_TABLE_ID, 1));
+
     }
 
     public List<Recipe> getRecipes() {
@@ -38,18 +44,23 @@ public class CraftingManager {
      * @return true se teve sucesso, false caso contrário
      */
     public boolean craft(Recipe recipe, Player player) {
-        // 1. Verificar se tem materiais
-        if (!player.hasItem(recipe.inputId, recipe.inputCount)) {
-            System.out.println("Faltam materiais para: " + recipe.name);
-            return false;
+        // 1. VERIFICAR: O jogador tem TODOS os materiais necessários?
+        for (ItemStack requiredItem : recipe.inputs) {
+            if (!player.hasItem(requiredItem.getId(), requiredItem.getAmount())) {
+                // Se faltar algum item da lista, cancela
+                System.out.println("Faltam materiais: " + requiredItem.getId());
+                return false;
+            }
         }
 
-        // 2. Tentar adicionar o produto final (verifica espaço)
-        // Nota: A tua lógica atual tenta adicionar primeiro. Se der, remove os materiais.
-        // Isto previne perder materiais se o inventário estiver cheio.
+        // 2. ADICIONAR: Tentar adicionar o produto final (verifica espaço)
         if (player.addItem(recipe.outputId, recipe.outputCount)) {
-            // 3. Remover os materiais consumidos
-            player.removeItem(recipe.inputId, recipe.inputCount);
+
+            // 3. REMOVER: Consumir todos os materiais da lista
+            for (ItemStack requiredItem : recipe.inputs) {
+                player.removeItem(requiredItem.getId(), requiredItem.getAmount());
+            }
+
             System.out.println("Sucesso! Criado: " + recipe.name);
             return true;
         } else {

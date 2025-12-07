@@ -1,25 +1,32 @@
 package jogo.crafting;
 
-public class Recipe {
-    public final String name;
-    public final byte inputId;
-    public final int inputCount;
-    public final byte outputId;
-    public final int outputCount;
-    public final int[] visualSlots;
+import jogo.gameobject.item.ItemStack;
+import java.util.ArrayList;
+import java.util.List;
 
-    public Recipe(String name, byte inputId, int inputCount, byte outputId, int outputCount, int ... visualSlots) {
+public class Recipe {
+    public String name;
+    // Agora aceitamos uma lista de itens em vez de um só ID
+    public List<ItemStack> inputs = new ArrayList<>();
+    public byte outputId;
+    public int outputCount;
+
+    // Construtor Simples (1 ingrediente) - Para manter compatibilidade
+    public Recipe(String name, byte inputId, int inputCount, byte outputId, int outputCount) {
         this.name = name;
-        this.inputId = inputId;
-        this.inputCount = inputCount;
+        this.inputs.add(new ItemStack(inputId, inputCount));
         this.outputId = outputId;
         this.outputCount = outputCount;
-        // Se não passarmos posições (erro), preenche sequencialmente para não crashar
-        if (visualSlots == null || visualSlots.length == 0) {
-            this.visualSlots = new int[inputCount];
-            for(int i=0; i<inputCount; i++) this.visualSlots[i] = i;
-        } else {
-            this.visualSlots = visualSlots;
+    }
+
+    // Construtor Avançado (Múltiplos ingredientes)
+    // Exemplo de uso: new Recipe("Pickaxe", outputId, count, new ItemStack(plank, 3), new ItemStack(stick, 2))
+    public Recipe(String name, byte outputId, int outputCount, ItemStack... requiredInputs) {
+        this.name = name;
+        this.outputId = outputId;
+        this.outputCount = outputCount;
+        for (ItemStack is : requiredInputs) {
+            this.inputs.add(is);
         }
     }
 }

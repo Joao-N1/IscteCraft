@@ -168,6 +168,34 @@ public class WorldAppState extends BaseAppState {
         // ---------------------------
 
         if (breakTimer >= blockType.getHardness()) {
+
+            // --- LÓGICA DE DANO CORRIGIDA (Com som) ---
+            if (blockId == VoxelPalette.SpikyWood_ID) {
+                if (playerAppState != null) {
+                    jogo.appstate.HudAppState hud = getState(jogo.appstate.HudAppState.class);
+                    int slot = hud != null ? hud.getSelectedSlotIndex() : 0;
+                    ItemStack itemInHand = playerAppState.getPlayer().getHotbar()[slot];
+
+                    boolean isTool = false;
+                    // Verificar se é uma ferramenta (Picaretas ou Espada)
+                    if (itemInHand != null) {
+                        byte id = itemInHand.getId();
+                        if (id == VoxelPalette.WOOD_PICK_ID ||
+                                id == VoxelPalette.STONE_PICK_ID ||
+                                id == VoxelPalette.IRON_PICK_ID ||
+                                id == VoxelPalette.SWORD_ID) {
+                            isTool = true;
+                        }
+                    }
+
+                    // Se NÃO for ferramenta (mão vazia ou a segurar blocos), dá dano
+                    if (!isTool) {
+                        // Chama o método no PlayerAppState que criámos antes
+                        // Se ainda não tens este método, vê o passo 2 abaixo
+                        playerAppState.takeDamage(5);
+                    }
+                }
+            }
             if (voxelWorld.breakAt(currentTarget.x, currentTarget.y, currentTarget.z)) {
                 voxelWorld.rebuildDirtyChunks(physicsSpace);
                 if (playerAppState != null) {
@@ -241,6 +269,8 @@ public class WorldAppState extends BaseAppState {
     public List<DroppedItem> getDroppedItems() {
         return droppedItems;
     }
+
+
 
     @Override
     protected void cleanup(Application app) {

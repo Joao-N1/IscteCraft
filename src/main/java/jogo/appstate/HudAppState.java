@@ -329,38 +329,68 @@ public class HudAppState extends BaseAppState {
         playerRecipes.clear();
         tableRecipes.clear();
 
-        // Receitas
-        Recipe rWoodPick = new Recipe("Wood Pick", VoxelPalette.PLANKS_ID, 3, VoxelPalette.WOOD_PICK_ID, 1);
-        Recipe rStonePick = new Recipe("Stone Pick", VoxelPalette.STONE_ID, 3, VoxelPalette.STONE_PICK_ID, 1);
-        Recipe rIronPick = new Recipe("Iron Pick", VoxelPalette.IRON_MAT_ID, 3, VoxelPalette.IRON_PICK_ID, 1);
+        // --- RECEITAS BÁSICAS (Inventário do Jogador) ---
+        // 1 Madeira -> 4 Tábuas
         Recipe rPlanks = new Recipe("Planks", VoxelPalette.Wood_ID, 1, VoxelPalette.PLANKS_ID, 4);
+        // 2 Tábuas -> 4 Paus
         Recipe rSticks = new Recipe("Sticks", VoxelPalette.PLANKS_ID, 2, VoxelPalette.STICK_ID, 4);
+        // 4 Tábuas -> 1 Mesa de Trabalho
         Recipe rTable = new Recipe("Table", VoxelPalette.PLANKS_ID, 4, VoxelPalette.CRAFTING_TABLE_ID, 1);
 
-        Recipe rSpikyPlanks = new Recipe("Spiky Planks", VoxelPalette.SpikyWood_ID, 1, VoxelPalette.SPIKY_PLANKS_ID, 4);
-        Recipe rSpikySword = new Recipe("Spiky Sword", VoxelPalette.SPIKY_PLANKS_ID, 2, VoxelPalette.SWORD_ID, 1);
-
-        Recipe rLantern = new Recipe("Lantern", VoxelPalette.IRON_MAT_ID, 8, VoxelPalette.LANTERN_OFF_ID, 1);
-
-
-        // Jogador (Inventário normal)
         playerRecipes.add(rPlanks);
-        playerRecipes.add(rTable);
         playerRecipes.add(rSticks);
+        playerRecipes.add(rTable);
         createRecipeIcons(playerRecipes, playerRecipeIcons, inventoryNode);
 
-        // Mesa (Interface dedicada)
+        // --- RECEITAS DA MESA DE TRABALHO ---
         initTableUI();
 
-        tableRecipes.add(rWoodPick);
-        tableRecipes.add(rStonePick);
-        tableRecipes.add(rIronPick);
+        // Adicionar as básicas também à mesa
         tableRecipes.add(rPlanks);
         tableRecipes.add(rSticks);
-        tableRecipes.add(rSpikyPlanks);
-        tableRecipes.add(rSpikySword);
-        tableRecipes.add(rLantern);
         tableRecipes.add(rTable);
+
+        // --- FERRAMENTAS ---
+
+        // Picareta de Madeira: 3 Tábuas + 2 Paus
+        tableRecipes.add(new Recipe("WoodPick",
+                VoxelPalette.WOOD_PICK_ID, 1,
+                new ItemStack(VoxelPalette.PLANKS_ID, 3),
+                new ItemStack(VoxelPalette.STICK_ID, 2)
+        ));
+
+        // Picareta de Pedra: 3 Pedras + 2 Paus
+        tableRecipes.add(new Recipe("StonePick",
+                VoxelPalette.STONE_PICK_ID, 1,
+                new ItemStack(VoxelPalette.STONE_ID, 3),
+                new ItemStack(VoxelPalette.STICK_ID, 2)
+        ));
+
+        // Picareta de Ferro: 3 Minérios de Ferro (Ingots) + 2 Paus
+        tableRecipes.add(new Recipe("IronPick",
+                VoxelPalette.IRON_PICK_ID, 1,
+                new ItemStack(VoxelPalette.IRON_MAT_ID, 3),
+                new ItemStack(VoxelPalette.STICK_ID, 2)
+        ));
+
+        // --- ILUMINAÇÃO ---
+
+        // Lanterna: 1 Carvão + 4 Ferros (Imita carvão no meio rodeado de ferro)
+        tableRecipes.add(new Recipe("Lantern",
+                VoxelPalette.LANTERN_OFF_ID, 1,
+                new ItemStack(VoxelPalette.COAL_MAT_ID, 1),
+                new ItemStack(VoxelPalette.IRON_MAT_ID, 4)
+        ));
+
+        //SPIKY PLANKS
+        tableRecipes.add(new Recipe("SpikyPlanks",
+                VoxelPalette.SPIKY_PLANKS_ID, 4,
+                new ItemStack(VoxelPalette.SpikyWood_ID, 4)));
+
+        // Espada (Exemplo genérico se tiveres o ID):
+        tableRecipes.add(new Recipe("Sword",
+                VoxelPalette.SWORD_ID, 1,
+                new ItemStack(VoxelPalette.SPIKY_PLANKS_ID, 2), new ItemStack(VoxelPalette.STICK_ID, 1)));
 
         createRecipeIcons(tableRecipes, tableRecipeIcons, craftingTableNode);
     }
@@ -423,7 +453,14 @@ public class HudAppState extends BaseAppState {
             // Label de custo
             BitmapText lbl = new BitmapText(guiFont, false);
             lbl.setSize(guiFont.getCharSet().getRenderedSize() * 0.7f);
-            lbl.setText(r.inputCount + "x");
+
+            // CORREÇÃO: Pega na quantidade do primeiro ingrediente da lista
+            if (!r.inputs.isEmpty()) {
+                lbl.setText(r.inputs.get(0).getAmount() + "x");
+            } else {
+                lbl.setText("");
+            }
+
             lbl.setColor(ColorRGBA.Yellow);
             parent.attachChild(lbl);
             icon.setUserData("label", lbl);
@@ -529,7 +566,7 @@ public class HudAppState extends BaseAppState {
 
     // Interação na Mesa: Selecionar Receita OU Clicar no Resultado
     private void handleTableInteraction(Vector2f mouse, Player p) {
-        // Livro
+        // A. Selecionar Receita do Livro
         for (int i = 0; i < tableRecipeIcons.size(); i++) {
             Picture icon = tableRecipeIcons.get(i);
             if (isMouseOver(icon, mouse)) {
@@ -539,13 +576,26 @@ public class HudAppState extends BaseAppState {
             }
         }
 
-        // B. Verificar se clicou no Resultado (para craftar)
+        // B. Clicar no Resultado para Craftar
         if (isMouseOver(resultIcon, mouse) && selectedRecipe != null) {
-            // Tentar craftar
-            if (p.hasItem(selectedRecipe.inputId, selectedRecipe.inputCount)) {
+
+            // CORREÇÃO: Verificar lista de ingredientes
+            boolean hasAllMaterials = true;
+            for (ItemStack req : selectedRecipe.inputs) {
+                if (!p.hasItem(req.getId(), req.getAmount())) {
+                    hasAllMaterials = false;
+                    break;
+                }
+            }
+
+            if (hasAllMaterials) {
                 if (p.addItem(selectedRecipe.outputId, selectedRecipe.outputCount)) {
-                    p.removeItem(selectedRecipe.inputId, selectedRecipe.inputCount);
+                    // Remover materiais
+                    for (ItemStack req : selectedRecipe.inputs) {
+                        p.removeItem(req.getId(), req.getAmount());
+                    }
                     System.out.println("Crafted na Mesa: " + selectedRecipe.name);
+                    updateGridVisuals(); // Atualizar visual (pode ficar cinzento se acabaram os items)
                 } else {
                     System.out.println("Inventário cheio!");
                 }
@@ -558,26 +608,34 @@ public class HudAppState extends BaseAppState {
     // Atualiza a visualização da grelha na mesa
     private void updateGridVisuals() {
         if (selectedRecipe == null) {
-            // Esconder tudo se nada selecionado
             for (Picture p : gridInputIcons) p.setCullHint(Node.CullHint.Always);
             resultIcon.setCullHint(Node.CullHint.Always);
             return;
         }
 
-        // 1. Mostrar Materiais (Input)
-        // Como as receitas são simples, vamos preencher os primeiros slots com o material
-        for (int i = 0; i < 9; i++) {
-            if (i < selectedRecipe.inputCount) {
-                try {
-                    gridInputIcons.get(i).setImage(assetManager, "Textures/" + getTextureNameById(selectedRecipe.inputId), true);
-                    gridInputIcons.get(i).setCullHint(Node.CullHint.Never);
-                } catch (Exception e) {}
-            } else {
-                gridInputIcons.get(i).setCullHint(Node.CullHint.Always);
+        // CORREÇÃO: Preencher a grelha com base na lista de ingredientes
+        int slotIndex = 0;
+
+        for (ItemStack req : selectedRecipe.inputs) {
+            // Se a receita pede 3 Planks, desenha 3 ícones de Planks
+            for (int k = 0; k < req.getAmount(); k++) {
+                if (slotIndex < 9) {
+                    Picture icon = gridInputIcons.get(slotIndex);
+                    try {
+                        icon.setImage(assetManager, "Textures/" + getTextureNameById(req.getId()), true);
+                        icon.setCullHint(Node.CullHint.Never);
+                    } catch (Exception e) {}
+                    slotIndex++;
+                }
             }
         }
 
-        // 2. Mostrar Resultado (Output)
+        // Esconder o resto dos slots vazios
+        for (int i = slotIndex; i < 9; i++) {
+            gridInputIcons.get(i).setCullHint(Node.CullHint.Always);
+        }
+
+        // Mostrar Resultado
         try {
             resultIcon.setImage(assetManager, "Textures/" + getTextureNameById(selectedRecipe.outputId), true);
             resultIcon.setCullHint(Node.CullHint.Never);
@@ -589,9 +647,22 @@ public class HudAppState extends BaseAppState {
         for (int i = 0; i < icons.size(); i++) {
             if (isMouseOver(icons.get(i), mouse)) {
                 Recipe r = recipes.get(i);
-                if (p.hasItem(r.inputId, r.inputCount)) {
+
+                // CORREÇÃO: Verificar lista de ingredientes
+                boolean hasAll = true;
+                for (ItemStack req : r.inputs) {
+                    if (!p.hasItem(req.getId(), req.getAmount())) {
+                        hasAll = false;
+                        break;
+                    }
+                }
+
+                if (hasAll) {
                     if (p.addItem(r.outputId, r.outputCount)) {
-                        p.removeItem(r.inputId, r.inputCount);
+                        // Consumir todos os ingredientes
+                        for (ItemStack req : r.inputs) {
+                            p.removeItem(req.getId(), req.getAmount());
+                        }
                         System.out.println("Crafted (Instant): " + r.name);
                     }
                 }
@@ -715,10 +786,16 @@ public class HudAppState extends BaseAppState {
             Recipe r = rList.get(i);
             Picture icon = iList.get(i);
             try {
-                // Colorir de cinzento se não houver materiais, branco se houver
                 if (icon.getMaterial() != null) {
-                    boolean has = p.hasItem(r.inputId, r.inputCount);
-                    icon.getMaterial().setColor("Color", has ? ColorRGBA.White : ColorRGBA.Gray);
+                    // CORREÇÃO: Verificar se tem TODOS os ingredientes da lista
+                    boolean hasAll = true;
+                    for (ItemStack req : r.inputs) {
+                        if (!p.hasItem(req.getId(), req.getAmount())) {
+                            hasAll = false;
+                            break;
+                        }
+                    }
+                    icon.getMaterial().setColor("Color", hasAll ? ColorRGBA.White : ColorRGBA.Gray);
                 }
             } catch (Exception ignored) {}
         }
@@ -856,9 +933,8 @@ public class HudAppState extends BaseAppState {
                 mainInvSlots.get(i).setPosition(x, y);
             }
 
-            // Crafting Básico (JOGADOR) - Só aparece se a mesa estiver fechada
+            // Crafting Básico (JOGADOR)
             boolean showPlayerRecipes = !isCraftingOpen;
-
             float craftX = startX - 60f;
             for (int i = 0; i < playerRecipeIcons.size(); i++) {
                 Picture icon = playerRecipeIcons.get(i);
@@ -879,7 +955,7 @@ public class HudAppState extends BaseAppState {
             }
         }
 
-        // 4.MESA + LIVRO CENTRADOS
+        // 4. MESA + LIVRO CENTRADOS
         if (isCraftingOpen) {
             float totalWidth = BOOK_WIDTH + TABLE_WIDTH - PANEL_OVERLAP;
             float groupStartX = (w - totalWidth) / 2f;
@@ -893,11 +969,10 @@ public class HudAppState extends BaseAppState {
             // Livro (Esquerda)
             recipeBookBg.setPosition(-BOOK_WIDTH + PANEL_OVERLAP, 0);
 
-            // Grelha da Mesa (Ajustada para a tua imagem)
+            // Grelha da Mesa
             float gridStartX = (TABLE_WIDTH / 2f) - 101f;
             float gridStartY = PANEL_HEIGHT - 113f;
             float gridSize = 30f;
-
             float gapX = 8f;
             float gapY = 14f;
 
@@ -911,7 +986,7 @@ public class HudAppState extends BaseAppState {
             float resY = gridStartY - (gridSize + gapY) - 15f;
             resultIcon.setPosition(resX, resY);
 
-            // Grelha do Livro
+            // Grelha do Livro (Ícones das Receitas)
             float bookOriginX = -BOOK_WIDTH + PANEL_OVERLAP;
             float currentGridX = bookOriginX + GRID_START_X;
             float currentGridY = PANEL_HEIGHT - GRID_START_Y;
@@ -928,14 +1003,28 @@ public class HudAppState extends BaseAppState {
 
                 Recipe r = tableRecipes.get(i);
                 Player p = getState(PlayerAppState.class).getPlayer();
+
+                // --- CORREÇÃO AQUI: Verificar Lista de Ingredientes ---
                 if (icon.getMaterial() != null) {
-                    if (p.hasItem(r.inputId, r.inputCount)) icon.getMaterial().setColor("Color", ColorRGBA.White);
+                    boolean hasAll = true;
+                    for (ItemStack req : r.inputs) {
+                        if (!p.hasItem(req.getId(), req.getAmount())) {
+                            hasAll = false;
+                            break;
+                        }
+                    }
+                    if (hasAll) icon.getMaterial().setColor("Color", ColorRGBA.White);
                     else icon.getMaterial().setColor("Color", ColorRGBA.Gray);
                 }
+
                 BitmapText lbl = (BitmapText) icon.getUserData("label");
                 if(lbl != null) lbl.setCullHint(Node.CullHint.Always);
             }
         }
+    }
+    // Adiciona este método no final da classe, antes de fechar a última chaveta }
+    public int getSelectedSlotIndex() {
+        return this.currentSlotIndex;
     }
 
     @Override protected void cleanup(Application app) {

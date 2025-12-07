@@ -18,6 +18,11 @@ import jogo.gameobject.GameObject;
 import jogo.gameobject.character.Player;
 import jogo.gameobject.item.Item;
 
+// --- IMPORTS PARA O BRILHO (BLOOM) ---
+import com.jme3.post.FilterPostProcessor;
+import com.jme3.post.filters.BloomFilter;
+// -------------------------------------
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -44,6 +49,18 @@ public class RenderAppState extends BaseAppState {
     protected void initialize(Application app) {
         gameNode = new Node("GameObjects");
         rootNode.attachChild(gameNode);
+
+        // --- ADICIONAR EFEITO DE BRILHO (BLOOM) AQUI ---
+        FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
+
+        // GlowMode.Objects faz com que apenas materiais com "GlowMap" ou "GlowColor" brilhem
+        BloomFilter bloom = new BloomFilter(BloomFilter.GlowMode.Objects);
+        bloom.setBloomIntensity(2.0f); // Força do brilho
+        bloom.setExposurePower(5.0f);  // O quão longe a luz se espalha
+
+        fpp.addFilter(bloom);
+        app.getViewPort().addProcessor(fpp);
+        // -----------------------------------------------
     }
 
     @Override
@@ -109,60 +126,40 @@ public class RenderAppState extends BaseAppState {
             try {
                 Spatial model = assetManager.loadModel("Models/SheepNPC/source/sheep.gltf");
                 model.setName(obj.getName());
-
-                // --- 1. AJUSTE DE ESCALA ---
-                // Estava 1.0f, mudamos para 0.4f para ficar do tamanho de um bloco
                 model.setLocalScale(1.0f);
-
                 sheepNode.attachChild(model);
-
             } catch (Exception e) {
                 System.out.println("Erro ao carregar modelo: " + e.getMessage());
-                // Fallback (caixa branca) só se falhar
                 Geometry g = new Geometry(obj.getName(), new Box(0.3f, 0.3f, 0.5f));
                 g.setMaterial(colored(ColorRGBA.White));
                 sheepNode.attachChild(g);
             }
-
-            // --- REMOVI A CAIXA DE DEBUG VERMELHA DAQUI ---
-
             return sheepNode;
 
         } else if (obj instanceof jogo.gameobject.character.Zombie) {
-        Node zombieNode = new Node("ZombieVisual");
-        try {
-            // Caminho indicado por ti:
-            Spatial model = assetManager.loadModel("Models/zombieNPC/source/model.gltf");
-            model.setName(obj.getName());
-
-            // Ajusta a escala conforme necessário (começa com 0.4f tal como a ovelha ou maior)
-            model.setLocalScale(1.0f);
-
-            zombieNode.attachChild(model);
-        } catch (Exception e) {
-            System.out.println("Erro ao carregar Zombie: " + e.getMessage());
-            // Fallback: Caixa Verde
-            Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.9f, 0.4f));
-            g.setMaterial(colored(ColorRGBA.Green));
-            zombieNode.attachChild(g);
-        }
-        return zombieNode;
+            Node zombieNode = new Node("ZombieVisual");
+            try {
+                Spatial model = assetManager.loadModel("Models/zombieNPC/source/model.gltf");
+                model.setName(obj.getName());
+                model.setLocalScale(1.0f);
+                zombieNode.attachChild(model);
+            } catch (Exception e) {
+                System.out.println("Erro ao carregar Zombie: " + e.getMessage());
+                Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.9f, 0.4f));
+                g.setMaterial(colored(ColorRGBA.Green));
+                zombieNode.attachChild(g);
+            }
+            return zombieNode;
         } else if (obj instanceof jogo.gameobject.character.Wolf) {
             Node wolfNode = new Node("WolfVisual");
             try {
-                // Caminho indicado por ti (confirma se a pasta é 'wolfNPC' ou 'WolfNPC')
                 Spatial model = assetManager.loadModel("Models/wolfNPC/wolf.gltf");
                 model.setName(obj.getName());
-
-                // Ajuste de escala (ajusta se ele aparecer gigante)
                 model.setLocalScale(0.075f);
-
                 model.setLocalTranslation(0, 0.6f, 0);
-
                 wolfNode.attachChild(model);
             } catch (Exception e) {
                 System.out.println("Erro ao carregar Lobo: " + e.getMessage());
-                // Fallback: Caixa Cinzenta
                 Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.4f, 0.8f));
                 g.setMaterial(colored(ColorRGBA.Gray));
                 wolfNode.attachChild(g);
@@ -171,28 +168,18 @@ public class RenderAppState extends BaseAppState {
         } else if (obj instanceof jogo.gameobject.character.Trader) {
             Node traderNode = new Node("TraderVisual");
             try {
-                // Caminho: Models/traderNPC/trader.gltf
                 Spatial model = assetManager.loadModel("Models/traderNPC/trader.gltf");
                 model.setName(obj.getName());
-
-                // Ajuste de escala (Humanoides costumam ser 0.4f neste projeto)
                 model.setLocalScale(1.3f);
-
-                // -------------------------------------------
-
                 traderNode.attachChild(model);
             } catch (Exception e) {
                 System.out.println("Erro Trader: " + e.getMessage());
-                // Fallback: Caixa Azul
                 Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.9f, 0.4f));
                 g.setMaterial(colored(ColorRGBA.Blue));
                 traderNode.attachChild(g);
             }
             return traderNode;
         }
-
-    // ...
-
         return null;
     }
 
