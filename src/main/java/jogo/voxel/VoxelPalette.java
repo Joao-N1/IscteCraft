@@ -51,6 +51,10 @@ public class VoxelPalette {
         p.register(new StonePickBlockType());  // 22
         p.register(new IronPickBlockType());   // 23
 
+        // NOVOS REGISTOS
+        p.register(new SpikyPlanksBlockType()); // 24
+        p.register(new SwordBlockType());  // 25
+
         return p;
     }
 
@@ -81,4 +85,8 @@ public class VoxelPalette {
     public static final byte WOOD_PICK_ID = 21;
     public static final byte STONE_PICK_ID = 22;
     public static final byte IRON_PICK_ID = 23;
+
+    // NOVOS IDs
+    public static final byte SPIKY_PLANKS_ID = 24;
+    public static final byte SWORD_ID = 25;
 }

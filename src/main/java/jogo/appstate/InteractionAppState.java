@@ -16,6 +16,7 @@ import jogo.gameobject.GameObject;
 import jogo.gameobject.character.Trader;
 import jogo.gameobject.item.Item;
 import jogo.voxel.VoxelBlockType;
+import jogo.voxel.VoxelPalette;
 import jogo.voxel.VoxelWorld;
 
 public class InteractionAppState extends BaseAppState {
@@ -63,7 +64,22 @@ public class InteractionAppState extends BaseAppState {
 
                 if (obj instanceof jogo.gameobject.character.Character npc && !(obj instanceof jogo.gameobject.character.Player)) {
                     if (!npc.isDead()) {
-                        npc.takeDamage(5);
+
+                        // --- LÓGICA DE DANO DA ESPADA ---
+                        int damage = 5; // Dano base (mão)
+
+                        // Verificar se tem a espada equipada
+                        PlayerAppState pState = getState(PlayerAppState.class);
+                        if (pState != null) {
+                            byte heldItem = pState.getPlayer().getHeldItem();
+                            if (heldItem == VoxelPalette.SWORD_ID) {
+                                damage = 20;
+                            }
+                        }
+
+                        npc.takeDamage(damage);
+                        // -------------------------------
+
                         playerAttackCooldown = 0.5f;
 
                         // Tocar som de dano (baseado no animal)

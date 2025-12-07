@@ -146,6 +146,27 @@ public class WorldAppState extends BaseAppState {
         byte blockId = voxelWorld.getBlock(currentTarget.x, currentTarget.y, currentTarget.z);
         var blockType = voxelWorld.getPalette().get(blockId);
 
+        // --- LÓGICA DE PICARETAS ---
+        float speedMultiplier = 1.0f; // Velocidade base (mão vazia)
+
+        if (playerAppState != null) {
+            byte heldItem = playerAppState.getPlayer().getHeldItem();
+
+            // Verificar qual picareta está equipada e definir o multiplicador
+            if (heldItem == VoxelPalette.WOOD_PICK_ID) {
+                speedMultiplier = 2.0f; // 2x mais rápido
+            } else if (heldItem == VoxelPalette.STONE_PICK_ID) {
+                speedMultiplier = 4.0f; // 4x mais rápido
+            } else if (heldItem == VoxelPalette.IRON_PICK_ID) {
+                speedMultiplier = 6.0f; // 6x mais rápido
+            }
+        }
+
+        // Aplicar o multiplicador ao tempo decorrido
+        // Se tiveres picareta, o tempo "passa mais depressa" para o bloco, partindo-o logo.
+        breakTimer += tpf * speedMultiplier;
+        // ---------------------------
+
         if (breakTimer >= blockType.getHardness()) {
             if (voxelWorld.breakAt(currentTarget.x, currentTarget.y, currentTarget.z)) {
                 voxelWorld.rebuildDirtyChunks(physicsSpace);

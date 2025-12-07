@@ -330,9 +330,15 @@ public class HudAppState extends BaseAppState {
         tableRecipes.clear();
 
         // Receitas
+        Recipe rWoodPick = new Recipe("Wood Pick", VoxelPalette.PLANKS_ID, 3, VoxelPalette.WOOD_PICK_ID, 1);
+        Recipe rStonePick = new Recipe("Stone Pick", VoxelPalette.STONE_ID, 3, VoxelPalette.STONE_PICK_ID, 1);
+        Recipe rIronPick = new Recipe("Iron Pick", VoxelPalette.IRON_MAT_ID, 3, VoxelPalette.IRON_PICK_ID, 1);
         Recipe rPlanks = new Recipe("Planks", VoxelPalette.Wood_ID, 1, VoxelPalette.PLANKS_ID, 4);
         Recipe rSticks = new Recipe("Sticks", VoxelPalette.PLANKS_ID, 2, VoxelPalette.STICK_ID, 4);
         Recipe rTable = new Recipe("Table", VoxelPalette.PLANKS_ID, 4, VoxelPalette.CRAFTING_TABLE_ID, 1);
+
+        Recipe rSpikyPlanks = new Recipe("Spiky Planks", VoxelPalette.SpikyWood_ID, 1, VoxelPalette.SPIKY_PLANKS_ID, 4);
+        Recipe rSpikySword = new Recipe("Spiky Sword", VoxelPalette.SPIKY_PLANKS_ID, 2, VoxelPalette.SWORD_ID, 1);
 
         // Jogador (Inventário normal)
         playerRecipes.add(rPlanks);
@@ -343,8 +349,14 @@ public class HudAppState extends BaseAppState {
         // Mesa (Interface dedicada)
         initTableUI();
 
+        tableRecipes.add(rWoodPick);
+        tableRecipes.add(rStonePick);
+        tableRecipes.add(rIronPick);
         tableRecipes.add(rPlanks);
         tableRecipes.add(rSticks);
+        tableRecipes.add(rSpikyPlanks);
+        tableRecipes.add(rSpikySword);
+
         // tableRecipes.add(rTable);
         createRecipeIcons(tableRecipes, tableRecipeIcons, craftingTableNode);
     }
@@ -739,6 +751,10 @@ public class HudAppState extends BaseAppState {
         // Materiais (Certifica-te que estas imagens estão na pasta Textures, ou muda o nome aqui)
         if (id == VoxelPalette.COAL_MAT_ID) return "CoalOre.png";
         if (id == VoxelPalette.IRON_MAT_ID) return "IronOre.png";
+
+        // NOVAS TEXTURAS
+        if (id == VoxelPalette.SPIKY_PLANKS_ID) return "SpikyPlankBlock.png";
+        if (id == VoxelPalette.SWORD_ID) return "Sword.png";
 
         // Fallback (Padrão)
         return "DirtBlock.png";
