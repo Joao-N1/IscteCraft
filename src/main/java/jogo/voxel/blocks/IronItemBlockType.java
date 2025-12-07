@@ -11,7 +11,7 @@ public class IronItemBlockType extends VoxelBlockType {
     @Override
     public Material getMaterial(AssetManager am) {
         // Usa a textura do "material" que pediste
-        Texture2D tex = (Texture2D) am.loadTexture("Materials/IronOre.png");
+        Texture2D tex = (Texture2D) am.loadTexture("Textures/IronOre.png");
         Material m = new Material(am, "Common/MatDefs/Light/Lighting.j3md");
         m.setTexture("DiffuseMap", tex);
         m.setBoolean("UseMaterialColors", true);

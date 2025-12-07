@@ -721,6 +721,26 @@ public class HudAppState extends BaseAppState {
         if (id == VoxelPalette.PLANKS_ID) return "PlanksBlock.png";
         if (id == VoxelPalette.STICK_ID) return "Stick.png";
         if (id == VoxelPalette.CRAFTING_TABLE_ID) return "CraftingTableBlock.png";
+
+        // --- NOVOS BLOCOS ADICIONADOS ---
+        if (id == VoxelPalette.SAND_ID) return "SandBlock.png";
+        if (id == VoxelPalette.WATER_ID) return "WaterBlock.png";
+        if (id == VoxelPalette.TARGET_ID) return "TargetBlock.png"; // O teu novo bloco de alvo
+
+        // Lanternas
+        if (id == VoxelPalette.LANTERN_OFF_ID) return "LanternOff.png";
+        if (id == VoxelPalette.LANTERN_ON_ID) return "LanternOn.png";
+
+        // Picaretas
+        if (id == VoxelPalette.WOOD_PICK_ID) return "WoodPick.png";
+        if (id == VoxelPalette.STONE_PICK_ID) return "StonePick.png";
+        if (id == VoxelPalette.IRON_PICK_ID) return "IronPick.png";
+
+        // Materiais (Certifica-te que estas imagens estão na pasta Textures, ou muda o nome aqui)
+        if (id == VoxelPalette.COAL_MAT_ID) return "CoalOre.png";
+        if (id == VoxelPalette.IRON_MAT_ID) return "IronOre.png";
+
+        // Fallback (Padrão)
         return "DirtBlock.png";
     }
 

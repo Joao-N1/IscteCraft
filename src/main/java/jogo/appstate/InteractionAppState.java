@@ -101,7 +101,7 @@ public class InteractionAppState extends BaseAppState {
 
                     jogo.appstate.HudAppState hud = getState(jogo.appstate.HudAppState.class);
                     if (hud != null) {
-                        hud.showSubtitle("Trader: 'Bem vindo ao IscteCraft! explora o que o mundo tem para oferecer e aguarda atualizacoes :) .'", 4.0f);
+                        hud.showSubtitle("Trader: 'Bem vindo ao IscteCraft! Acerta todos os alvos no menor tempo possível ao atirar blocos com o G e explora o mundo!! :) .'", 4.0f);
                     }
                     return;
                 }
