@@ -10,11 +10,11 @@ import com.jme3.scene.Node;
 import com.jme3.ui.Picture;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector2f;
-import com.jme3.material.Material;
 import jogo.gameobject.character.Player;
 import jogo.gameobject.item.ItemStack;
 import jogo.voxel.VoxelPalette;
 import jogo.crafting.Recipe;
+import jogo.system.HighScoreManager; // Necessário para o Leaderboard
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,21 +27,20 @@ public class HudAppState extends BaseAppState {
     private BitmapFont guiFont;
 
     // --- UI INVENTÁRIO (Hotbar e Principal) ---
-    private Node inventoryNode = new Node("InventoryNode");
-    private List<Picture> hotbarSlots = new ArrayList<>();
-    private List<BitmapText> hotbarTexts = new ArrayList<>();
-    private List<Picture> hotbarIcons = new ArrayList<>();
+    private final Node inventoryNode = new Node("InventoryNode");
+    private final List<Picture> hotbarSlots = new ArrayList<>();
+    private final List<BitmapText> hotbarTexts = new ArrayList<>();
+    private final List<Picture> hotbarIcons = new ArrayList<>();
 
-    private List<Picture> mainInvSlots = new ArrayList<>();
-    private List<BitmapText> mainInvTexts = new ArrayList<>();
-    private List<Picture> mainInvIcons = new ArrayList<>();
+    private final List<Picture> mainInvSlots = new ArrayList<>();
+    private final List<BitmapText> mainInvTexts = new ArrayList<>();
+    private final List<Picture> mainInvIcons = new ArrayList<>();
 
     private Picture selector;
     private Picture cursorItemIcon; // Item "preso" ao rato
-    private List<Picture> hearts = new ArrayList<>();
+    private final List<Picture> hearts = new ArrayList<>();
 
-    // ======================= UI CRAFTING (VISUAL NOVO) ========================
-
+    // ======================= UI CRAFTING ========================
     // Imagens de Fundo
     private Picture recipeBookBg;
 
@@ -49,29 +48,27 @@ public class HudAppState extends BaseAppState {
     private final float PANEL_HEIGHT = 300f;
     private final float TABLE_WIDTH = 270f;
     private final float BOOK_WIDTH = 270f;
-    private final float PANEL_OVERLAP = 0f; // Ajuste de conexão
+    private final float PANEL_OVERLAP = 0f;
 
     // Grelha do Livro
     private final int GRID_COLS = 4;
-    private final float GRID_START_X = 21f; // Margem esquerda dentro do livro
-    private final float GRID_START_Y = 89f; // Margem topo dentro do livro
-    private final float SLOT_SIZE = 44f;    // Tamanho do slot
-    private final float SLOT_GAP = 3f;      // Espaço entre slots
+    private final float GRID_START_X = 21f;
+    private final float GRID_START_Y = 89f;
+    private final float SLOT_SIZE = 44f;
+    private final float SLOT_GAP = 3f;
 
-    // ==========================================================================
-    // Receitas do Jogador (Básico - sempre visível no inventário)
-    private List<Recipe> playerRecipes = new ArrayList<>();
-    private List<Picture> playerRecipeIcons = new ArrayList<>();
+    // Receitas
+    private final List<Recipe> playerRecipes = new ArrayList<>();
+    private final List<Picture> playerRecipeIcons = new ArrayList<>();
 
-    // Receitas da Mesa (Avançado - só na mesa)
-    private Node craftingTableNode = new Node("CraftingTableUI");
+    private final Node craftingTableNode = new Node("CraftingTableUI");
     private Picture craftingBg;
-    private List<Recipe> tableRecipes = new ArrayList<>();
-    private List<Picture> tableRecipeIcons = new ArrayList<>();
+    private final List<Recipe> tableRecipes = new ArrayList<>();
+    private final List<Picture> tableRecipeIcons = new ArrayList<>();
 
-    // Visualização da Receita Selecionada na Mesa (Grelha 3x3 + Resultado)
-    private List<Picture> gridInputIcons = new ArrayList<>(); // 9 slots visuais para mostrar materiais
-    private Picture resultIcon; // O botão final onde clicas para craftar
+    // Visualização da Receita Selecionada na Mesa
+    private final List<Picture> gridInputIcons = new ArrayList<>();
+    private Picture resultIcon;
     private Recipe selectedRecipe = null;
 
     // Estados
@@ -84,48 +81,24 @@ public class HudAppState extends BaseAppState {
     private final float HOTBAR_HEIGHT = 44f;
     private final float HEART_SIZE = 20f;
 
-    // --- NOVO: LEGENDAS (SUBTITLES) ---
+    // --- TEXTOS E MENUS ---
     private BitmapText subtitleText;
     private float subtitleTimer = 0f;
-    // ----------------------------------
 
-    private Node loadMenuNode = new Node("LoadMenu");
+    private final Node loadMenuNode = new Node("LoadMenu");
     private BitmapText loadMenuText;
 
     private BitmapText miniGameText;
     private BitmapText highScoreText;
 
-    // --- LEADERBOARD / SUCCESS MSG ---
-    private Node leaderboardNode = new Node("LeaderboardNode");
-    private float leaderboardTimer = 0f; // Temporizador para auto-hide
-    private boolean isLeaderboardVisible = false; // Estado atual
+    // --- LEADERBOARD ---
+    private final Node leaderboardNode = new Node("LeaderboardNode");
+    private float leaderboardTimer = 0f;
+    private boolean isLeaderboardVisible = false;
 
     public HudAppState(Node guiNode, AssetManager assetManager) {
         this.guiNode = guiNode;
         this.assetManager = assetManager;
-    }
-
-    /**
-     * Mostra um texto no ecrã por X segundos.
-     */
-    public void showSubtitle(String text, float duration) {
-        if (subtitleText != null) {
-            subtitleText.setText(text);
-            subtitleTimer = duration;
-            centerSubtitle(); // Recalcular posição para ficar centrado
-        }
-    }
-
-    private void centerSubtitle() {
-        SimpleApplication sapp = (SimpleApplication) getApplication();
-        float w = sapp.getCamera().getWidth();
-        float h = sapp.getCamera().getHeight();
-
-        float textWidth = subtitleText.getLineWidth();
-        float x = (w - textWidth) / 2f;
-        float y = h * 0.75f; // Posição: 75% da altura do ecrã
-
-        subtitleText.setLocalTranslation(x, y, 0);
     }
 
     @Override
@@ -139,133 +112,120 @@ public class HudAppState extends BaseAppState {
         guiNode.attachChild(crosshair);
 
         // 2. Inicializar Elementos UI
-        initHotbar(app);
-        initHearts(app);
-        initInventory(app);
+        initHotbar();
+        initHearts();
+        initInventory();
         initCursorItem();
 
         // 3. Inicializar Crafting (Jogador e Mesa)
         initCraftingSystems();
 
-        // --- 4. INICIALIZAR LEGENDAS ---
-        subtitleText = new BitmapText(guiFont, false);
-        subtitleText.setSize(guiFont.getCharSet().getRenderedSize() * 1.2f);
-        subtitleText.setColor(ColorRGBA.Yellow);
-        subtitleText.setText("");
+        // 4. Textos
+        subtitleText = createText(ColorRGBA.Yellow, 1.2f);
         guiNode.attachChild(subtitleText);
-        // -------------------------------
 
-        loadMenuText = new BitmapText(guiFont, false);
-        loadMenuText.setSize(guiFont.getCharSet().getRenderedSize() * 1.5f);
-        loadMenuText.setColor(ColorRGBA.Green);
+        loadMenuText = createText(ColorRGBA.Green, 1.5f);
         loadMenuText.setText("SAVES DISPONIVEIS:\n(F1) save1\n(F2) save2");
-        loadMenuText.setLocalTranslation(50, 600, 0); // Posição no ecrã
         loadMenuNode.attachChild(loadMenuText);
 
-        miniGameText = new BitmapText(guiFont, false);
-        miniGameText.setSize(guiFont.getCharSet().getRenderedSize());
-        miniGameText.setColor(ColorRGBA.Cyan);
-        miniGameText.setLocalTranslation(10, 700, 0); // Topo esquerdo
+        miniGameText = createText(ColorRGBA.Cyan, 1.0f);
+        miniGameText.setLocalTranslation(10, 700, 0);
         guiNode.attachChild(miniGameText);
 
-
-        // Inicializar Texto do Leaderboard (mas não anexar ainda)
-        highScoreText = new BitmapText(guiFont, false);
-        highScoreText.setSize(guiFont.getCharSet().getRenderedSize() * 1.2f);
-        highScoreText.setColor(ColorRGBA.Yellow);
-        highScoreText.setLocalTranslation(400, 500, 0); // Centro (aprox)
+        highScoreText = createText(ColorRGBA.Yellow, 1.2f);
         leaderboardNode.attachChild(highScoreText);
 
         refreshLayout();
         System.out.println("HudAppState initialized.");
     }
 
-    // Novos Métodos
-    public void updateMiniGameInfo(float time, int hits, int total) {
-        miniGameText.setText(String.format("Tempo: %.1fs | Alvos: %d/%d", time, hits, total));
+    private BitmapText createText(ColorRGBA color, float sizeMult) {
+        BitmapText txt = new BitmapText(guiFont, false);
+        txt.setSize(guiFont.getCharSet().getRenderedSize() * sizeMult);
+        txt.setColor(color);
+        txt.setText("");
+        return txt;
     }
 
-    public void showHighScores(List<jogo.system.HighScoreManager.ScoreEntry> scores, float currentTime) {
-        StringBuilder sb = new StringBuilder("PARABÉNS! TERMINASTE EM " + String.format("%.2f", currentTime) + "s\n\n");
-        sb.append("=== TOP SCORES ===\n");
+    // --- UI HELPERS ---
 
-        int pos = 1;
-        for (jogo.system.HighScoreManager.ScoreEntry s : scores) {
-            sb.append(pos++).append(". ").append(s.toString()).append("\n");
+    public void showSubtitle(String text, float duration) {
+        if (subtitleText != null) {
+            subtitleText.setText(text);
+            subtitleTimer = duration;
+            centerSubtitle();
         }
-
-        highScoreText.setText(sb.toString());
-        guiNode.attachChild(highScoreText);
     }
 
-    // --- INICIALIZAÇÃO UI BÁSICA ---
+    private void centerSubtitle() {
+        SimpleApplication sapp = (SimpleApplication) getApplication();
+        float w = sapp.getCamera().getWidth();
+        float h = sapp.getCamera().getHeight();
+        float x = (w - subtitleText.getLineWidth()) / 2f;
+        float y = h * 0.75f;
+        subtitleText.setLocalTranslation(x, y, 0);
+    }
 
-    // Substitui o método showLoadMenu por este melhorado:
+    public void updateMiniGameInfo(float time, int hits, int total) {
+        if (miniGameText != null) {
+            miniGameText.setText(String.format("Tempo: %.1fs | Alvos: %d/%d", time, hits, total));
+        }
+    }
 
     public void showLoadMenu(List<String> saves) {
         StringBuilder sb = new StringBuilder("=== MENU DE LOAD ===\n\n");
-
         if (saves.isEmpty()) {
             sb.append("Nenhum save encontrado.\nJoga e carrega em 'M' para salvar.");
         } else {
             sb.append("Seleciona um mundo com F1, F2, F3...\n\n");
             for (int i = 0; i < saves.size(); i++) {
-                // Limitar a visualização a 9 saves para não sair do ecrã
-                if (i >= 9) {
-                    sb.append("... (mais saves ocultos)");
-                    break;
-                }
+                if (i >= 9) { sb.append("... (mais saves ocultos)"); break; }
                 sb.append("[F").append(i + 1).append("]  ").append(saves.get(i)).append("\n");
             }
         }
-
-        // Adicionar fundo escuro ao texto para melhor leitura (opcional, se quiseres usar o recipeBookBg)
         loadMenuText.setText(sb.toString());
-
-        // Centrar no ecrã
         SimpleApplication sapp = (SimpleApplication) getApplication();
-        float x = 50;
-        float y = sapp.getCamera().getHeight() - 100;
-        loadMenuText.setLocalTranslation(x, y, 0);
-
+        loadMenuText.setLocalTranslation(50, sapp.getCamera().getHeight() - 100, 0);
         guiNode.attachChild(loadMenuNode);
     }
 
-    public boolean isLoadMenuVisible() {
-        return loadMenuNode.getParent() != null;
+    public boolean isLoadMenuVisible() { return loadMenuNode.getParent() != null; }
+    public void hideLoadMenu() { loadMenuNode.removeFromParent(); }
+
+    public void showLeaderboard(List<HighScoreManager.ScoreEntry> scores, float duration, String headerMsg) {
+        StringBuilder sb = new StringBuilder(headerMsg + "\n\n=== TOP SCORES ===\n");
+        if (scores.isEmpty()) sb.append("(Ainda sem registos)");
+        else {
+            int pos = 1;
+            for (HighScoreManager.ScoreEntry s : scores) {
+                sb.append(pos++).append(". ").append(s.toString()).append("\n");
+            }
+        }
+        highScoreText.setText(sb.toString());
+        float w = getApplication().getCamera().getWidth();
+        float h = getApplication().getCamera().getHeight();
+        highScoreText.setLocalTranslation((w - highScoreText.getLineWidth()) / 2f, h * 0.75f, 0);
+
+        if (leaderboardNode.getParent() == null) guiNode.attachChild(leaderboardNode);
+        this.leaderboardTimer = duration;
+        this.isLeaderboardVisible = true;
     }
 
-    public void hideLoadMenu() {
-        loadMenuNode.removeFromParent();
+    public void hideLeaderboard() {
+        leaderboardNode.removeFromParent();
+        isLeaderboardVisible = false;
+        leaderboardTimer = 0f;
     }
 
-    private void initHotbar(Application app) {
+    public boolean isLeaderboardVisible() { return isLeaderboardVisible; }
+
+    // --- INITIALIZATION ---
+
+    private void initHotbar() {
         float slotWidth = HOTBAR_WIDTH / 9f;
         for (int i = 0; i < 9; i++) {
-            // Fundo
-            Picture slot = new Picture("HotbarSlot_" + i);
-            slot.setImage(assetManager, "Interface/hotbarsquare.png", true);
-            slot.setWidth(slotWidth);
-            slot.setHeight(HOTBAR_HEIGHT);
-            guiNode.attachChild(slot);
-            hotbarSlots.add(slot);
-
-            // Ícone
-            Picture icon = new Picture("HotbarIcon_" + i);
-            icon.setWidth(slotWidth * 0.6f);
-            icon.setHeight(HOTBAR_HEIGHT * 0.6f);
-            guiNode.attachChild(icon);
-            hotbarIcons.add(icon);
-
-            // Texto
-            BitmapText count = new BitmapText(guiFont, false);
-            count.setSize(guiFont.getCharSet().getRenderedSize() * 0.8f);
-            count.setColor(ColorRGBA.White);
-            count.setText("");
-            guiNode.attachChild(count);
-            hotbarTexts.add(count);
+            createSlot(i, slotWidth, HOTBAR_HEIGHT, hotbarSlots, hotbarIcons, hotbarTexts, guiNode, true);
         }
-        // Selector
         selector = new Picture("Selector");
         selector.setImage(assetManager, "Interface/selector.png", true);
         selector.setWidth(slotWidth);
@@ -273,7 +233,35 @@ public class HudAppState extends BaseAppState {
         guiNode.attachChild(selector);
     }
 
-    private void initHearts(Application app) {
+    private void initInventory() {
+        float slotSize = HOTBAR_WIDTH / 9f;
+        for (int i = 0; i < 27; i++) {
+            createSlot(i, slotSize, slotSize, mainInvSlots, mainInvIcons, mainInvTexts, inventoryNode, false);
+        }
+    }
+
+    private void createSlot(int i, float w, float h, List<Picture> slots, List<Picture> icons, List<BitmapText> texts, Node parent, boolean isHotbar) {
+        Picture slot = new Picture((isHotbar ? "HotbarSlot_" : "InvSlot_") + i);
+        slot.setImage(assetManager, "Interface/hotbarsquare.png", true);
+        slot.setWidth(w);
+        slot.setHeight(h);
+        parent.attachChild(slot);
+        slots.add(slot);
+
+        Picture icon = new Picture((isHotbar ? "HotbarIcon_" : "InvIcon_") + i);
+        icon.setWidth(w * 0.6f);
+        icon.setHeight(h * 0.6f);
+        parent.attachChild(icon);
+        icons.add(icon);
+
+        BitmapText txt = new BitmapText(guiFont, false);
+        txt.setSize(guiFont.getCharSet().getRenderedSize() * 0.8f);
+        txt.setColor(ColorRGBA.White);
+        parent.attachChild(txt);
+        texts.add(txt);
+    }
+
+    private void initHearts() {
         for (int i = 0; i < 10; i++) {
             Picture heart = new Picture("Heart_" + i);
             heart.setImage(assetManager, "Interface/heart_full.png", true);
@@ -284,57 +272,25 @@ public class HudAppState extends BaseAppState {
         }
     }
 
-    private void initInventory(Application app) {
-        float slotSize = HOTBAR_WIDTH / 9f;
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                // Fundo
-                Picture slot = new Picture("InvSlot_" + row + "_" + col);
-                slot.setImage(assetManager, "Interface/hotbarsquare.png", true);
-                slot.setWidth(slotSize);
-                slot.setHeight(slotSize);
-                inventoryNode.attachChild(slot);
-                mainInvSlots.add(slot);
-
-                // Ícone
-                Picture icon = new Picture("InvIcon_" + row + "_" + col);
-                icon.setWidth(slotSize * 0.6f);
-                icon.setHeight(slotSize * 0.6f);
-                inventoryNode.attachChild(icon);
-                mainInvIcons.add(icon);
-
-                // Texto
-                BitmapText count = new BitmapText(guiFont, false);
-                count.setSize(guiFont.getCharSet().getRenderedSize() * 0.8f);
-                count.setColor(ColorRGBA.White);
-                count.setText("");
-                inventoryNode.attachChild(count);
-                mainInvTexts.add(count);
-            }
-        }
-    }
-
     private void initCursorItem() {
         cursorItemIcon = new Picture("CursorItem");
-        try { cursorItemIcon.setImage(assetManager, "Interface/CursorItem.png", true); } catch(Exception e){}
+        try { cursorItemIcon.setImage(assetManager, "Interface/CursorItem.png", true); }
+        catch(Exception e){ System.out.println("Aviso: CursorItem.png em falta"); }
         cursorItemIcon.setWidth(HOTBAR_WIDTH / 9f * 0.6f);
         cursorItemIcon.setHeight(HOTBAR_WIDTH / 9f * 0.6f);
         cursorItemIcon.setCullHint(Node.CullHint.Always);
         guiNode.attachChild(cursorItemIcon);
     }
 
-    // --- INICIALIZAÇÃO CRAFTING ---
+    // --- CRAFTING ---
 
     private void initCraftingSystems() {
         playerRecipes.clear();
         tableRecipes.clear();
 
-        // --- RECEITAS BÁSICAS (Inventário do Jogador) ---
-        // 1 Madeira -> 4 Tábuas
+        // Receitas do Jogador
         Recipe rPlanks = new Recipe("Planks", VoxelPalette.Wood_ID, 1, VoxelPalette.PLANKS_ID, 4);
-        // 2 Tábuas -> 4 Paus
         Recipe rSticks = new Recipe("Sticks", VoxelPalette.PLANKS_ID, 2, VoxelPalette.STICK_ID, 4);
-        // 4 Tábuas -> 1 Mesa de Trabalho
         Recipe rTable = new Recipe("Table", VoxelPalette.PLANKS_ID, 4, VoxelPalette.CRAFTING_TABLE_ID, 1);
 
         playerRecipes.add(rPlanks);
@@ -342,94 +298,55 @@ public class HudAppState extends BaseAppState {
         playerRecipes.add(rTable);
         createRecipeIcons(playerRecipes, playerRecipeIcons, inventoryNode);
 
-        // --- RECEITAS DA MESA DE TRABALHO ---
+        // UI da Mesa
         initTableUI();
 
-        // Adicionar as básicas também à mesa
+        // Receitas da Mesa
         tableRecipes.add(rPlanks);
         tableRecipes.add(rSticks);
         tableRecipes.add(rTable);
 
-        // --- FERRAMENTAS ---
+        // Ferramentas
+        tableRecipes.add(new Recipe("WoodPick", VoxelPalette.WOOD_PICK_ID, 1, new ItemStack(VoxelPalette.PLANKS_ID, 3), new ItemStack(VoxelPalette.STICK_ID, 2)));
+        tableRecipes.add(new Recipe("StonePick", VoxelPalette.STONE_PICK_ID, 1, new ItemStack(VoxelPalette.STONE_ID, 3), new ItemStack(VoxelPalette.STICK_ID, 2)));
+        tableRecipes.add(new Recipe("IronPick", VoxelPalette.IRON_PICK_ID, 1, new ItemStack(VoxelPalette.IRON_MAT_ID, 3), new ItemStack(VoxelPalette.STICK_ID, 2)));
 
-        // Picareta de Madeira: 3 Tábuas + 2 Paus
-        tableRecipes.add(new Recipe("WoodPick",
-                VoxelPalette.WOOD_PICK_ID, 1,
-                new ItemStack(VoxelPalette.PLANKS_ID, 3),
-                new ItemStack(VoxelPalette.STICK_ID, 2)
-        ));
-
-        // Picareta de Pedra: 3 Pedras + 2 Paus
-        tableRecipes.add(new Recipe("StonePick",
-                VoxelPalette.STONE_PICK_ID, 1,
-                new ItemStack(VoxelPalette.STONE_ID, 3),
-                new ItemStack(VoxelPalette.STICK_ID, 2)
-        ));
-
-        // Picareta de Ferro: 3 Minérios de Ferro (Ingots) + 2 Paus
-        tableRecipes.add(new Recipe("IronPick",
-                VoxelPalette.IRON_PICK_ID, 1,
-                new ItemStack(VoxelPalette.IRON_MAT_ID, 3),
-                new ItemStack(VoxelPalette.STICK_ID, 2)
-        ));
-
-        // --- ILUMINAÇÃO ---
-
-        // Lanterna: 1 Carvão + 4 Ferros (Imita carvão no meio rodeado de ferro)
-        tableRecipes.add(new Recipe("Lantern",
-                VoxelPalette.LANTERN_OFF_ID, 1,
-                new ItemStack(VoxelPalette.COAL_MAT_ID, 1),
-                new ItemStack(VoxelPalette.IRON_MAT_ID, 4)
-        ));
-
-        //SPIKY PLANKS
-        tableRecipes.add(new Recipe("SpikyPlanks",
-                VoxelPalette.SPIKY_PLANKS_ID, 4,
-                new ItemStack(VoxelPalette.SpikyWood_ID, 4)));
-
-        // Espada (Exemplo genérico se tiveres o ID):
-        tableRecipes.add(new Recipe("Sword",
-                VoxelPalette.SWORD_ID, 1,
-                new ItemStack(VoxelPalette.SPIKY_PLANKS_ID, 2), new ItemStack(VoxelPalette.STICK_ID, 1)));
+        // Outros
+        tableRecipes.add(new Recipe("Lantern", VoxelPalette.LANTERN_OFF_ID, 1, new ItemStack(VoxelPalette.COAL_MAT_ID, 1), new ItemStack(VoxelPalette.IRON_MAT_ID, 4)));
+        tableRecipes.add(new Recipe("SpikyPlanks", VoxelPalette.SPIKY_PLANKS_ID, 4, new ItemStack(VoxelPalette.SpikyWood_ID, 4)));
+        tableRecipes.add(new Recipe("Sword", VoxelPalette.SWORD_ID, 1, new ItemStack(VoxelPalette.SPIKY_PLANKS_ID, 2), new ItemStack(VoxelPalette.STICK_ID, 1)));
 
         createRecipeIcons(tableRecipes, tableRecipeIcons, craftingTableNode);
     }
 
     private void initTableUI() {
-        // 1.Mesa
         craftingBg = new Picture("CraftingBg");
         try { craftingBg.setImage(assetManager, "Interface/CraftingUI.png", true); }
         catch (Exception e) { craftingBg.setImage(assetManager, "Interface/hotbarsquare.png", true); }
-
         craftingBg.setWidth(TABLE_WIDTH);
         craftingBg.setHeight(PANEL_HEIGHT);
         craftingTableNode.attachChild(craftingBg);
 
-        // 2. LIVRO (Agora adicionado corretamente!)
         recipeBookBg = new Picture("RecipeBookBg");
-        try {
-            recipeBookBg.setImage(assetManager, "Interface/RecipeBook.png", true);
-        } catch (Exception e) {
-            System.out.println("Erro ao carregar RecipeBook.png, fallback cor castanha.");
+        try { recipeBookBg.setImage(assetManager, "Interface/RecipeBook.png", true); }
+        catch (Exception e) {
             recipeBookBg.setImage(assetManager, "Interface/hotbarsquare.png", true);
             recipeBookBg.getMaterial().setColor("Color", ColorRGBA.Brown);
         }
         recipeBookBg.setWidth(BOOK_WIDTH);
         recipeBookBg.setHeight(PANEL_HEIGHT);
-        craftingTableNode.attachChild(recipeBookBg); // <--- IMPORTANTE
+        craftingTableNode.attachChild(recipeBookBg);
 
-        // 3. Criar a Grelha Visual (3x3) para mostrar onde os materiais ficam
         float slotSize = 30f;
         for (int i = 0; i < 9; i++) {
             Picture gridIcon = new Picture("GridIcon_" + i);
             gridIcon.setWidth(slotSize);
             gridIcon.setHeight(slotSize);
-            gridIcon.setCullHint(Node.CullHint.Always); // Invisível por defeito
+            gridIcon.setCullHint(Node.CullHint.Always);
             craftingTableNode.attachChild(gridIcon);
             gridInputIcons.add(gridIcon);
         }
 
-        // 4. Criar o Ícone de Resultado (Botão de Crafting)
         resultIcon = new Picture("ResultIcon");
         resultIcon.setWidth(slotSize * 1.5f);
         resultIcon.setHeight(slotSize * 1.5f);
@@ -439,233 +356,112 @@ public class HudAppState extends BaseAppState {
 
     private void createRecipeIcons(List<Recipe> rList, List<Picture> iList, Node parent) {
         float iconSize = 32f;
-        for (int i = 0; i < rList.size(); i++) {
-            Recipe r = rList.get(i);
+        for (Recipe r : rList) {
             Picture icon = new Picture("Rec_" + r.name);
             try {
                 icon.setImage(assetManager, "Textures/" + getTextureNameById(r.outputId), true);
-            } catch(Exception e){}
+            } catch(Exception e){ System.out.println("Erro textura receita: " + r.name); }
             icon.setWidth(iconSize);
             icon.setHeight(iconSize);
             parent.attachChild(icon);
             iList.add(icon);
 
-            // Label de custo
             BitmapText lbl = new BitmapText(guiFont, false);
             lbl.setSize(guiFont.getCharSet().getRenderedSize() * 0.7f);
-
-            // CORREÇÃO: Pega na quantidade do primeiro ingrediente da lista
-            if (!r.inputs.isEmpty()) {
-                lbl.setText(r.inputs.get(0).getAmount() + "x");
-            } else {
-                lbl.setText("");
-            }
-
+            if (!r.inputs.isEmpty()) lbl.setText(r.inputs.get(0).getAmount() + "x");
             lbl.setColor(ColorRGBA.Yellow);
             parent.attachChild(lbl);
             icon.setUserData("label", lbl);
         }
     }
 
-    // --- UPDATE LOOP ---
+    // --- UPDATE ---
 
     @Override
     public void update(float tpf) {
         centerCrosshair();
         refreshLayout();
 
-        // --- LÓGICA DO TIMER DO LEADERBOARD ---
-        if (leaderboardTimer > 0) {
-            leaderboardTimer -= tpf;
-            if (leaderboardTimer <= 0) {
-                // O tempo acabou, esconder!
-                hideLeaderboard();
-            }
-        }
-
-        // --- LÓGICA DE TEMPO DA LEGENDA ---
-        if (subtitleTimer > 0) {
-            subtitleTimer -= tpf;
-            if (subtitleTimer <= 0) {
-                subtitleText.setText(""); // Limpar texto quando o tempo acaba
-            }
-        }
+        if (leaderboardTimer > 0 && (leaderboardTimer -= tpf) <= 0) hideLeaderboard();
+        if (subtitleTimer > 0 && (subtitleTimer -= tpf) <= 0) subtitleText.setText("");
 
         InputAppState input = getState(InputAppState.class);
         PlayerAppState playerState = getState(PlayerAppState.class);
 
         if (playerState != null) {
             Player player = playerState.getPlayer();
-
             updateInventoryDisplay(player);
             updateCursorItemVisual(player, getApplication().getInputManager().getCursorPosition());
 
             if (input != null && input.consumeUiClickRequested()) {
                 Vector2f mousePos = getApplication().getInputManager().getCursorPosition();
-
-                // 1. Inventário Aberto (tecla I)
                 if (isInventoryVisible) {
                     handleInventoryClick(mousePos, player);
-                    // Se a mesa NÃO estiver aberta, o clique na receita faz craft imediato
-                    if (!isCraftingOpen) {
-                        checkInstantCraftClick(mousePos, player, playerRecipes, playerRecipeIcons);
-                    }
+                    if (!isCraftingOpen) checkInstantCraftClick(mousePos, player, playerRecipes, playerRecipeIcons);
                 }
-
-                // 2. Mesa de Crafting Aberta (tecla E)
-                if (isCraftingOpen) {
-                    handleTableInteraction(mousePos, player);
-                }
+                if (isCraftingOpen) handleTableInteraction(mousePos, player);
             }
         }
     }
-
-    public void showLeaderboard(List<jogo.system.HighScoreManager.ScoreEntry> scores, float duration, String headerMsg) {
-        StringBuilder sb = new StringBuilder(headerMsg + "\n\n");
-        sb.append("=== TOP SCORES ===\n");
-
-        if (scores.isEmpty()) {
-            sb.append("(Ainda sem registos)");
-        } else {
-            int pos = 1;
-            for (jogo.system.HighScoreManager.ScoreEntry s : scores) {
-                sb.append(pos++).append(". ").append(s.toString()).append("\n");
-            }
-        }
-
-        highScoreText.setText(sb.toString());
-
-        // Centralizar no ecrã
-        float w = getApplication().getCamera().getWidth();
-        float h = getApplication().getCamera().getHeight();
-        float x = (w - highScoreText.getLineWidth()) / 2f;
-        float y = h * 0.75f;
-        highScoreText.setLocalTranslation(x, y, 0);
-
-        // Mostrar
-        if (leaderboardNode.getParent() == null) {
-            guiNode.attachChild(leaderboardNode);
-        }
-
-        this.leaderboardTimer = duration; // Define o temporizador (pode ser 0 para infinito)
-        this.isLeaderboardVisible = true;
-    }
-
-    public void hideLeaderboard() {
-        leaderboardNode.removeFromParent();
-        isLeaderboardVisible = false;
-        leaderboardTimer = 0f;
-    }
-
-    public boolean isLeaderboardVisible() {
-        return isLeaderboardVisible;
-    }
-
 
     // --- LÓGICA DE INTERAÇÃO ---
 
-    // Interação na Mesa: Selecionar Receita OU Clicar no Resultado
     private void handleTableInteraction(Vector2f mouse, Player p) {
-        // A. Selecionar Receita do Livro
         for (int i = 0; i < tableRecipeIcons.size(); i++) {
-            Picture icon = tableRecipeIcons.get(i);
-            if (isMouseOver(icon, mouse)) {
+            if (isMouseOver(tableRecipeIcons.get(i), mouse)) {
                 selectedRecipe = tableRecipes.get(i);
                 updateGridVisuals();
                 return;
             }
         }
-
-        // B. Clicar no Resultado para Craftar
         if (isMouseOver(resultIcon, mouse) && selectedRecipe != null) {
-
-            // CORREÇÃO: Verificar lista de ingredientes
-            boolean hasAllMaterials = true;
-            for (ItemStack req : selectedRecipe.inputs) {
-                if (!p.hasItem(req.getId(), req.getAmount())) {
-                    hasAllMaterials = false;
-                    break;
-                }
-            }
-
-            if (hasAllMaterials) {
-                if (p.addItem(selectedRecipe.outputId, selectedRecipe.outputCount)) {
-                    // Remover materiais
-                    for (ItemStack req : selectedRecipe.inputs) {
-                        p.removeItem(req.getId(), req.getAmount());
-                    }
-                    System.out.println("Crafted na Mesa: " + selectedRecipe.name);
-                    updateGridVisuals(); // Atualizar visual (pode ficar cinzento se acabaram os items)
-                } else {
-                    System.out.println("Inventário cheio!");
-                }
-            } else {
-                System.out.println("Faltam materiais!");
+            if (tryCraft(p, selectedRecipe)) {
+                updateGridVisuals();
             }
         }
     }
 
-    // Atualiza a visualização da grelha na mesa
+    private boolean tryCraft(Player p, Recipe r) {
+        for (ItemStack req : r.inputs) {
+            if (!p.hasItem(req.getId(), req.getAmount())) return false;
+        }
+        if (p.addItem(r.outputId, r.outputCount)) {
+            for (ItemStack req : r.inputs) p.removeItem(req.getId(), req.getAmount());
+            System.out.println("Crafted: " + r.name);
+            return true;
+        }
+        return false;
+    }
+
     private void updateGridVisuals() {
         if (selectedRecipe == null) {
-            for (Picture p : gridInputIcons) p.setCullHint(Node.CullHint.Always);
+            gridInputIcons.forEach(p -> p.setCullHint(Node.CullHint.Always));
             resultIcon.setCullHint(Node.CullHint.Always);
             return;
         }
-
-        // CORREÇÃO: Preencher a grelha com base na lista de ingredientes
         int slotIndex = 0;
-
         for (ItemStack req : selectedRecipe.inputs) {
-            // Se a receita pede 3 Planks, desenha 3 ícones de Planks
             for (int k = 0; k < req.getAmount(); k++) {
                 if (slotIndex < 9) {
-                    Picture icon = gridInputIcons.get(slotIndex);
+                    Picture icon = gridInputIcons.get(slotIndex++);
                     try {
                         icon.setImage(assetManager, "Textures/" + getTextureNameById(req.getId()), true);
                         icon.setCullHint(Node.CullHint.Never);
                     } catch (Exception e) {}
-                    slotIndex++;
                 }
             }
         }
-
-        // Esconder o resto dos slots vazios
-        for (int i = slotIndex; i < 9; i++) {
-            gridInputIcons.get(i).setCullHint(Node.CullHint.Always);
-        }
-
-        // Mostrar Resultado
+        for (int i = slotIndex; i < 9; i++) gridInputIcons.get(i).setCullHint(Node.CullHint.Always);
         try {
             resultIcon.setImage(assetManager, "Textures/" + getTextureNameById(selectedRecipe.outputId), true);
             resultIcon.setCullHint(Node.CullHint.Never);
         } catch (Exception e) {}
     }
 
-    // Crafting Instantâneo (Inventário Simples)
     private void checkInstantCraftClick(Vector2f mouse, Player p, List<Recipe> recipes, List<Picture> icons) {
         for (int i = 0; i < icons.size(); i++) {
             if (isMouseOver(icons.get(i), mouse)) {
-                Recipe r = recipes.get(i);
-
-                // CORREÇÃO: Verificar lista de ingredientes
-                boolean hasAll = true;
-                for (ItemStack req : r.inputs) {
-                    if (!p.hasItem(req.getId(), req.getAmount())) {
-                        hasAll = false;
-                        break;
-                    }
-                }
-
-                if (hasAll) {
-                    if (p.addItem(r.outputId, r.outputCount)) {
-                        // Consumir todos os ingredientes
-                        for (ItemStack req : r.inputs) {
-                            p.removeItem(req.getId(), req.getAmount());
-                        }
-                        System.out.println("Crafted (Instant): " + r.name);
-                    }
-                }
+                tryCraft(p, recipes.get(i));
                 return;
             }
         }
@@ -720,18 +516,14 @@ public class HudAppState extends BaseAppState {
     private boolean isMouseOver(Picture pic, Vector2f mouse) {
         float x = pic.getWorldTranslation().x;
         float y = pic.getWorldTranslation().y;
-        float w = pic.getWidth();
-        float h = pic.getHeight();
-        return mouse.x >= x && mouse.x <= x + w && mouse.y >= y && mouse.y <= y + h;
+        return mouse.x >= x && mouse.x <= x + pic.getWidth() && mouse.y >= y && mouse.y <= y + pic.getHeight();
     }
 
-    // --- VISUALIZADORES ---
+    // --- DISPLAY HELPERS ---
 
     public void updateInventoryDisplay(Player player) {
         updateSlotList(player.getHotbar(), hotbarSlots, hotbarIcons, hotbarTexts);
-        if (isInventoryVisible) {
-            updateSlotList(player.getMainInventory(), mainInvSlots, mainInvIcons, mainInvTexts);
-        }
+        if (isInventoryVisible) updateSlotList(player.getMainInventory(), mainInvSlots, mainInvIcons, mainInvTexts);
     }
 
     private void updateSlotList(ItemStack[] items, List<Picture> bgList, List<Picture> iconList, List<BitmapText> textList) {
@@ -742,9 +534,8 @@ public class HudAppState extends BaseAppState {
             Picture bg = bgList.get(i);
 
             if (stack != null && stack.getAmount() > 0) {
-                String texName = getTextureNameById(stack.getId());
                 try {
-                    icon.setImage(assetManager, "Textures/" + texName, true);
+                    icon.setImage(assetManager, "Textures/" + getTextureNameById(stack.getId()), true);
                     icon.setCullHint(Node.CullHint.Never);
                 } catch (Exception e) { icon.setCullHint(Node.CullHint.Always); }
 
@@ -752,14 +543,9 @@ public class HudAppState extends BaseAppState {
                 float y = bg.getWorldTranslation().y + (bg.getHeight() - icon.getHeight()) / 2f;
                 icon.setPosition(x, y);
 
-                if (stack.getAmount() > 1) {
-                    text.setText(String.valueOf(stack.getAmount()));
-                    float tx = bg.getWorldTranslation().x + bg.getWidth() - text.getLineWidth() - 7f;
-                    float ty = bg.getWorldTranslation().y + text.getLineHeight() + 5f;
-                    text.setLocalTranslation(tx, ty, 1);
-                } else {
-                    text.setText("");
-                }
+                text.setText(stack.getAmount() > 1 ? String.valueOf(stack.getAmount()) : "");
+                text.setLocalTranslation(bg.getWorldTranslation().x + bg.getWidth() - text.getLineWidth() - 7f,
+                        bg.getWorldTranslation().y + text.getLineHeight() + 5f, 1);
             } else {
                 icon.setCullHint(Node.CullHint.Always);
                 text.setText("");
@@ -768,14 +554,13 @@ public class HudAppState extends BaseAppState {
     }
 
     private void updateCursorItemVisual(Player player, Vector2f mousePos) {
-        ItemStack cursorStack = player.getCursorItem();
-        if (cursorStack != null && cursorStack.getAmount() > 0) {
+        ItemStack stack = player.getCursorItem();
+        if (stack != null && stack.getAmount() > 0) {
             try {
-                cursorItemIcon.setImage(assetManager, "Textures/" + getTextureNameById(cursorStack.getId()), true);
+                cursorItemIcon.setImage(assetManager, "Textures/" + getTextureNameById(stack.getId()), true);
             } catch (Exception e) {}
             cursorItemIcon.setPosition(mousePos.x - cursorItemIcon.getWidth()/2, mousePos.y - cursorItemIcon.getHeight()/2);
             cursorItemIcon.setCullHint(Node.CullHint.Never);
-            cursorItemIcon.setLocalTranslation(cursorItemIcon.getLocalTranslation().x, cursorItemIcon.getLocalTranslation().y, 10f);
         } else {
             cursorItemIcon.setCullHint(Node.CullHint.Always);
         }
@@ -787,13 +572,9 @@ public class HudAppState extends BaseAppState {
             Picture icon = iList.get(i);
             try {
                 if (icon.getMaterial() != null) {
-                    // CORREÇÃO: Verificar se tem TODOS os ingredientes da lista
                     boolean hasAll = true;
                     for (ItemStack req : r.inputs) {
-                        if (!p.hasItem(req.getId(), req.getAmount())) {
-                            hasAll = false;
-                            break;
-                        }
+                        if (!p.hasItem(req.getId(), req.getAmount())) { hasAll = false; break; }
                     }
                     icon.getMaterial().setColor("Color", hasAll ? ColorRGBA.White : ColorRGBA.Gray);
                 }
@@ -802,55 +583,42 @@ public class HudAppState extends BaseAppState {
     }
 
     private String getTextureNameById(byte id) {
-        if (id == VoxelPalette.DIRT_ID) return "DirtBlock.png";
-        if (id == VoxelPalette.GRASS_ID) return "GrassBlock.png";
-        if (id == VoxelPalette.STONE_ID) return "StoneBlock.png";
-        if (id == VoxelPalette.Wood_ID) return "WoodBlock.png";
-        if (id == VoxelPalette.Leaf_ID) return "LeafBlock.png";
-        if (id == VoxelPalette.SpikyWood_ID) return "SpikyWoodBlock.png";
-        if (id == VoxelPalette.COAL_ID) return "CoalBlock.png";
-        if (id == VoxelPalette.IRON_ID) return "IronBlock.png";
-        if (id == VoxelPalette.DIAMOND_ID) return "DiamondBlock.png";
-        if (id == VoxelPalette.PLANKS_ID) return "PlanksBlock.png";
-        if (id == VoxelPalette.STICK_ID) return "Stick.png";
-        if (id == VoxelPalette.CRAFTING_TABLE_ID) return "CraftingTableBlock.png";
-
-        // --- NOVOS BLOCOS ADICIONADOS ---
-        if (id == VoxelPalette.SAND_ID) return "SandBlock.png";
-        if (id == VoxelPalette.WATER_ID) return "WaterBlock.png";
-        if (id == VoxelPalette.TARGET_ID) return "TargetBlock.png"; // O teu novo bloco de alvo
-
-        // Lanternas
-        if (id == VoxelPalette.LANTERN_OFF_ID) return "LanternOff.png";
-        if (id == VoxelPalette.LANTERN_ON_ID) return "LanternOn.png";
-
-        // Picaretas
-        if (id == VoxelPalette.WOOD_PICK_ID) return "WoodPick.png";
-        if (id == VoxelPalette.STONE_PICK_ID) return "StonePick.png";
-        if (id == VoxelPalette.IRON_PICK_ID) return "IronPick.png";
-
-        // Materiais (Certifica-te que estas imagens estão na pasta Textures, ou muda o nome aqui)
-        if (id == VoxelPalette.COAL_MAT_ID) return "CoalOre.png";
-        if (id == VoxelPalette.IRON_MAT_ID) return "IronOre.png";
-
-        // NOVAS TEXTURAS
-        if (id == VoxelPalette.SPIKY_PLANKS_ID) return "SpikyPlankBlock.png";
-        if (id == VoxelPalette.SWORD_ID) return "Sword.png";
-        if (id == VoxelPalette.LANTERN_OFF_ID) return "LanternOff.png";
-        if (id == VoxelPalette.LANTERN_ON_ID) return "LanternOn.png";
-
-        // Fallback (Padrão)
-        return "DirtBlock.png";
+        return switch (id) {
+            case VoxelPalette.DIRT_ID -> "DirtBlock.png";
+            case VoxelPalette.GRASS_ID -> "GrassBlock.png";
+            case VoxelPalette.STONE_ID -> "StoneBlock.png";
+            case VoxelPalette.Wood_ID -> "WoodBlock.png";
+            case VoxelPalette.Leaf_ID -> "LeafBlock.png";
+            case VoxelPalette.SpikyWood_ID -> "SpikyWoodBlock.png";
+            case VoxelPalette.COAL_ID -> "CoalBlock.png";
+            case VoxelPalette.IRON_ID -> "IronBlock.png";
+            case VoxelPalette.DIAMOND_ID -> "DiamondBlock.png";
+            case VoxelPalette.PLANKS_ID -> "PlanksBlock.png";
+            case VoxelPalette.STICK_ID -> "Stick.png";
+            case VoxelPalette.CRAFTING_TABLE_ID -> "CraftingTableBlock.png";
+            case VoxelPalette.SAND_ID -> "SandBlock.png";
+            case VoxelPalette.WATER_ID -> "WaterBlock.png";
+            case VoxelPalette.TARGET_ID -> "TargetBlock.png";
+            case VoxelPalette.LANTERN_OFF_ID -> "LanternOff.png";
+            case VoxelPalette.LANTERN_ON_ID -> "LanternOn.png";
+            case VoxelPalette.WOOD_PICK_ID -> "WoodPick.png";
+            case VoxelPalette.STONE_PICK_ID -> "StonePick.png";
+            case VoxelPalette.IRON_PICK_ID -> "IronPick.png";
+            case VoxelPalette.COAL_MAT_ID -> "CoalOre.png";
+            case VoxelPalette.IRON_MAT_ID -> "IronOre.png";
+            case VoxelPalette.SPIKY_PLANKS_ID -> "SpikyPlankBlock.png";
+            case VoxelPalette.SWORD_ID -> "Sword.png";
+            default -> "DirtBlock.png";
+        };
     }
 
-    // --- GESTÃO ---
+    // --- GESTÃO GERAL ---
 
     public void openCraftingTable() {
         if (isCraftingOpen) return;
         isCraftingOpen = true;
         guiNode.attachChild(craftingTableNode);
         setInventoryVisible(true);
-        // Reset seleção
         selectedRecipe = null;
         updateGridVisuals();
     }
@@ -885,23 +653,22 @@ public class HudAppState extends BaseAppState {
         SimpleApplication sapp = (SimpleApplication) getApplication();
         int w = sapp.getCamera().getWidth();
         int h = sapp.getCamera().getHeight();
-        float x = (w - crosshair.getLineWidth()) / 2f;
-        float y = (h + crosshair.getLineHeight()) / 2f;
-        crosshair.setLocalTranslation(x, y, 0);
+        crosshair.setLocalTranslation((w - crosshair.getLineWidth()) / 2f, (h + crosshair.getLineHeight()) / 2f, 0);
     }
 
     public void setHealth(int currentHealth) {
         for (int i = 0; i < hearts.size(); i++) {
-            Picture heart = hearts.get(i);
             int heartVal = (i + 1) * 10;
             int halfVal = heartVal - 5;
             try {
-                if (currentHealth >= heartVal) heart.setImage(assetManager, "Interface/heart_full.png", true);
-                else if (currentHealth >= halfVal) heart.setImage(assetManager, "Interface/heart_half.png", true);
-                else heart.setImage(assetManager, "Interface/heart_empty.png", true);
+                if (currentHealth >= heartVal) hearts.get(i).setImage(assetManager, "Interface/heart_full.png", true);
+                else if (currentHealth >= halfVal) hearts.get(i).setImage(assetManager, "Interface/heart_half.png", true);
+                else hearts.get(i).setImage(assetManager, "Interface/heart_empty.png", true);
             } catch (Exception e) {}
         }
     }
+
+    public int getSelectedSlotIndex() { return currentSlotIndex; }
 
     // --- LAYOUT ---
 
@@ -909,44 +676,34 @@ public class HudAppState extends BaseAppState {
         SimpleApplication sapp = (SimpleApplication) getApplication();
         float w = sapp.getCamera().getWidth();
         float h = sapp.getCamera().getHeight();
-
         float startX = (w / 2f) - (HOTBAR_WIDTH / 2f);
         float hotbarY = 10f;
 
-        // 1. Hotbar
-        for (int i=0; i<9; i++) {
-            hotbarSlots.get(i).setPosition(startX + (i * (HOTBAR_WIDTH/9f)), hotbarY);
-        }
+        for (int i=0; i<9; i++) hotbarSlots.get(i).setPosition(startX + (i * (HOTBAR_WIDTH/9f)), hotbarY);
         selector.setPosition(startX + (currentSlotIndex * (HOTBAR_WIDTH/9f)), hotbarY);
 
-        // 2. Corações
         float heartsY = hotbarY + HOTBAR_HEIGHT + 10f;
         for (int i=0; i<hearts.size(); i++) hearts.get(i).setPosition(startX + (i * (HEART_SIZE + 2f)), heartsY);
 
-        // 3. Inventário
         float invStartY = heartsY + 50f;
         if (isInventoryVisible) {
             for (int i = 0; i < mainInvSlots.size(); i++) {
                 int row = i / 9; int col = i % 9;
-                float x = startX + (col * (HOTBAR_WIDTH/9f));
-                float y = invStartY + ((2 - row) * (HOTBAR_WIDTH/9f));
-                mainInvSlots.get(i).setPosition(x, y);
+                mainInvSlots.get(i).setPosition(startX + (col * (HOTBAR_WIDTH/9f)), invStartY + ((2 - row) * (HOTBAR_WIDTH/9f)));
             }
 
-            // Crafting Básico (JOGADOR)
             boolean showPlayerRecipes = !isCraftingOpen;
             float craftX = startX - 60f;
             for (int i = 0; i < playerRecipeIcons.size(); i++) {
                 Picture icon = playerRecipeIcons.get(i);
-
                 if (showPlayerRecipes) {
                     float y = invStartY + 100f - (i * 50f);
                     icon.setPosition(craftX, y);
                     icon.setCullHint(Node.CullHint.Never);
                     BitmapText lbl = (BitmapText) icon.getUserData("label");
                     if(lbl!=null) { lbl.setLocalTranslation(craftX+45f, y+25f, 1); lbl.setCullHint(Node.CullHint.Never); }
-
-                    updateRecipeColors(playerRecipes, playerRecipeIcons, getState(PlayerAppState.class).getPlayer());
+                    Player p = getState(PlayerAppState.class).getPlayer();
+                    if(p!=null) updateRecipeColors(playerRecipes, playerRecipeIcons, p);
                 } else {
                     icon.setCullHint(Node.CullHint.Always);
                     BitmapText lbl = (BitmapText) icon.getUserData("label");
@@ -955,40 +712,27 @@ public class HudAppState extends BaseAppState {
             }
         }
 
-        // 4. MESA + LIVRO CENTRADOS
         if (isCraftingOpen) {
             float totalWidth = BOOK_WIDTH + TABLE_WIDTH - PANEL_OVERLAP;
             float groupStartX = (w - totalWidth) / 2f;
             float groupStartY = (h - PANEL_HEIGHT) / 2f + 40f;
 
-            // Mesa (Direita)
-            float tableScreenX = groupStartX + BOOK_WIDTH - PANEL_OVERLAP;
-            craftingTableNode.setLocalTranslation(tableScreenX, groupStartY, 0);
+            craftingTableNode.setLocalTranslation(groupStartX + BOOK_WIDTH - PANEL_OVERLAP, groupStartY, 0);
             craftingBg.setPosition(0, 0);
-
-            // Livro (Esquerda)
             recipeBookBg.setPosition(-BOOK_WIDTH + PANEL_OVERLAP, 0);
 
-            // Grelha da Mesa
             float gridStartX = (TABLE_WIDTH / 2f) - 101f;
             float gridStartY = PANEL_HEIGHT - 113f;
             float gridSize = 30f;
-            float gapX = 8f;
-            float gapY = 14f;
+            float gapX = 8f; float gapY = 14f;
 
             for (int i = 0; i < 9; i++) {
                 int r = i / 3; int c = i % 3;
-                float gx = gridStartX + c * (gridSize + gapX);
-                float gy = gridStartY - r * (gridSize + gapY);
-                gridInputIcons.get(i).setPosition(gx, gy);
+                gridInputIcons.get(i).setPosition(gridStartX + c * (gridSize + gapX), gridStartY - r * (gridSize + gapY));
             }
-            float resX = gridStartX + 3 * (gridSize + gapX) + 45f;
-            float resY = gridStartY - (gridSize + gapY) - 15f;
-            resultIcon.setPosition(resX, resY);
+            resultIcon.setPosition(gridStartX + 3 * (gridSize + gapX) + 45f, gridStartY - (gridSize + gapY) - 15f);
 
-            // Grelha do Livro (Ícones das Receitas)
-            float bookOriginX = -BOOK_WIDTH + PANEL_OVERLAP;
-            float currentGridX = bookOriginX + GRID_START_X;
+            float currentGridX = (-BOOK_WIDTH + PANEL_OVERLAP) + GRID_START_X;
             float currentGridY = PANEL_HEIGHT - GRID_START_Y;
 
             for (int i = 0; i < tableRecipeIcons.size(); i++) {
@@ -997,42 +741,26 @@ public class HudAppState extends BaseAppState {
                 int row = i / GRID_COLS;
                 float x = currentGridX + (col * (SLOT_SIZE + SLOT_GAP));
                 float y = currentGridY - (row * (SLOT_SIZE + SLOT_GAP));
-                float offset = (SLOT_SIZE - icon.getWidth()) / 2f;
-                icon.setPosition(x + offset, y - offset);
+                icon.setPosition(x + (SLOT_SIZE - icon.getWidth())/2f, y - (SLOT_SIZE - icon.getWidth())/2f);
                 icon.setCullHint(Node.CullHint.Never);
 
-                Recipe r = tableRecipes.get(i);
                 Player p = getState(PlayerAppState.class).getPlayer();
-
-                // --- CORREÇÃO AQUI: Verificar Lista de Ingredientes ---
-                if (icon.getMaterial() != null) {
-                    boolean hasAll = true;
-                    for (ItemStack req : r.inputs) {
-                        if (!p.hasItem(req.getId(), req.getAmount())) {
-                            hasAll = false;
-                            break;
-                        }
-                    }
-                    if (hasAll) icon.getMaterial().setColor("Color", ColorRGBA.White);
-                    else icon.getMaterial().setColor("Color", ColorRGBA.Gray);
-                }
+                if(p!=null) updateRecipeColors(tableRecipes, tableRecipeIcons, p);
 
                 BitmapText lbl = (BitmapText) icon.getUserData("label");
                 if(lbl != null) lbl.setCullHint(Node.CullHint.Always);
             }
         }
     }
-    // Adiciona este método no final da classe, antes de fechar a última chaveta }
-    public int getSelectedSlotIndex() {
-        return this.currentSlotIndex;
-    }
 
-    @Override protected void cleanup(Application app) {
+    @Override
+    protected void cleanup(Application app) {
         if(crosshair != null) crosshair.removeFromParent();
         hotbarSlots.forEach(Picture::removeFromParent);
         inventoryNode.removeFromParent();
         craftingTableNode.removeFromParent();
         if (subtitleText != null) subtitleText.removeFromParent();
+        if (miniGameText != null) miniGameText.removeFromParent();
     }
 
     @Override protected void onEnable() {}

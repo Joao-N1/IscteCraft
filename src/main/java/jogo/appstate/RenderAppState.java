@@ -109,77 +109,42 @@ public class RenderAppState extends BaseAppState {
     }
 
     private Spatial createSpatialFor(GameObject obj) {
-        //TODO This could be set inside each GameObject!
+        // O Player continua a ser especial (cilindro simples)
         if (obj instanceof Player) {
             Geometry g = new Geometry(obj.getName(), new Cylinder(16, 16, 0.35f, 1.4f, true));
             g.setMaterial(colored(ColorRGBA.Green));
             return g;
-        } else if (obj instanceof Item) {
+        }
+        // Itens simples
+        else if (obj instanceof Item) {
             Geometry g = new Geometry(obj.getName(), new Box(0.3f, 0.3f, 0.3f));
             g.setMaterial(colored(ColorRGBA.Yellow));
             return g;
-            // --- CÓDIGO NOVO PARA O MODELO ---
-        } else if (obj instanceof jogo.gameobject.character.Sheep) {
-            // Criar um NÓ para a ovelha
-            Node sheepNode = new Node("SheepVisual");
-
-            try {
-                Spatial model = assetManager.loadModel("Models/SheepNPC/source/sheep.gltf");
-                model.setName(obj.getName());
-                model.setLocalScale(1.0f);
-                sheepNode.attachChild(model);
-            } catch (Exception e) {
-                System.out.println("Erro ao carregar modelo: " + e.getMessage());
-                Geometry g = new Geometry(obj.getName(), new Box(0.3f, 0.3f, 0.5f));
-                g.setMaterial(colored(ColorRGBA.White));
-                sheepNode.attachChild(g);
-            }
-            return sheepNode;
-
-        } else if (obj instanceof jogo.gameobject.character.Zombie) {
-            Node zombieNode = new Node("ZombieVisual");
-            try {
-                Spatial model = assetManager.loadModel("Models/zombieNPC/source/model.gltf");
-                model.setName(obj.getName());
-                model.setLocalScale(1.0f);
-                zombieNode.attachChild(model);
-            } catch (Exception e) {
-                System.out.println("Erro ao carregar Zombie: " + e.getMessage());
-                Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.9f, 0.4f));
-                g.setMaterial(colored(ColorRGBA.Green));
-                zombieNode.attachChild(g);
-            }
-            return zombieNode;
-        } else if (obj instanceof jogo.gameobject.character.Wolf) {
-            Node wolfNode = new Node("WolfVisual");
-            try {
-                Spatial model = assetManager.loadModel("Models/wolfNPC/wolf.gltf");
-                model.setName(obj.getName());
-                model.setLocalScale(0.075f);
-                model.setLocalTranslation(0, 0.6f, 0);
-                wolfNode.attachChild(model);
-            } catch (Exception e) {
-                System.out.println("Erro ao carregar Lobo: " + e.getMessage());
-                Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.4f, 0.8f));
-                g.setMaterial(colored(ColorRGBA.Gray));
-                wolfNode.attachChild(g);
-            }
-            return wolfNode;
-        } else if (obj instanceof jogo.gameobject.character.Trader) {
-            Node traderNode = new Node("TraderVisual");
-            try {
-                Spatial model = assetManager.loadModel("Models/traderNPC/trader.gltf");
-                model.setName(obj.getName());
-                model.setLocalScale(1.3f);
-                traderNode.attachChild(model);
-            } catch (Exception e) {
-                System.out.println("Erro Trader: " + e.getMessage());
-                Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.9f, 0.4f));
-                g.setMaterial(colored(ColorRGBA.Blue));
-                traderNode.attachChild(g);
-            }
-            return traderNode;
         }
+        // LÓGICA GENÉRICA PARA TODOS OS PERSONAGENS (NPCs)
+        else if (obj instanceof jogo.gameobject.character.Character c) {
+            String path = c.getModelPath();
+
+            if (path != null) {
+                // Tenta carregar o modelo definido na classe do NPC
+                Node npcNode = new Node(obj.getName() + "_Visual");
+                try {
+                    Spatial model = assetManager.loadModel(path);
+                    model.setName(obj.getName());
+                    model.setLocalScale(c.getModelScale());
+                    model.setLocalTranslation(0, c.getModelOffsetY(), 0);
+                    npcNode.attachChild(model);
+                    return npcNode;
+                } catch (Exception e) {
+                    System.out.println("Erro ao carregar modelo para " + obj.getName() + ": " + e.getMessage());
+                    // Fallback: desenha uma caixa se o modelo falhar
+                    Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.9f, 0.4f));
+                    g.setMaterial(colored(ColorRGBA.Red));
+                    return g;
+                }
+            }
+        }
+
         return null;
     }
 

@@ -8,5 +8,8 @@ public class Sheep extends Character {
         // Podes definir vida ou velocidade aqui no futuro
     }
 
-    // Aqui poderás adicionar lógica específica, ex: comerRelva()
+    @Override
+    public String getModelPath() {
+        return "Models/SheepNPC/source/sheep.gltf";
+    }
 }

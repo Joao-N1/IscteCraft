@@ -66,4 +66,17 @@ public abstract class Character extends GameObject {
     public boolean isDead() {
         return isDead;
     }
+
+    // Novos métodos (com valores por defeito para não partir código antigo)
+    public String getModelPath() {
+        return null; // Se retornar null, o RenderAppState pode usar um cubo genérico
+    }
+
+    public float getModelScale() {
+        return 1.0f;
+    }
+
+    public float getModelOffsetY() {
+        return 0.0f; // Ajuste de altura
+    }
 }

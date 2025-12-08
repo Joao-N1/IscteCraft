@@ -87,7 +87,7 @@ public class NpcAppState extends BaseAppState {
 
         // --- GPS (Debug) ---
         gpsTimer += tpf;
-        if (gpsTimer >= 5.0f) {
+        if (gpsTimer >= 10.0f) {
             gpsTimer = 0f;
             Vec3 pp = player.getPosition();
             System.out.println("\n===== GPS REPORT =====");
