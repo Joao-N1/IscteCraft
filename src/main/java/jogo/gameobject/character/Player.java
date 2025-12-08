@@ -1,7 +1,6 @@
 package jogo.gameobject.character;
 
 import jogo.gameobject.item.ItemStack;
-import jogo.voxel.VoxelPalette; // Importante para IDs
 
 public class Player extends Character {
 

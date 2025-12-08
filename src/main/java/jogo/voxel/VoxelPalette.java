@@ -1,6 +1,7 @@
 package jogo.voxel;
 
-import jogo.voxel.blocks.*;
+import jogo.voxel.blocks.AirBlockType;
+
 import java.util.ArrayList;
 import java.util.List;
 

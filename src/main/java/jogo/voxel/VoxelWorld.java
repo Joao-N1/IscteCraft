@@ -1,5 +1,6 @@
 package jogo.voxel;
 
+import Noise.OpenSimplexNoise;
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.material.Material;
@@ -10,14 +11,14 @@ import com.jme3.renderer.Camera;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.texture.Texture2D;
+import jogo.system.GameSaveData;
 import jogo.util.Hit;
 import jogo.util.ProcTextures;
-import Noise.OpenSimplexNoise;
-import java.util.Random;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import jogo.system.GameSaveData;
+import java.util.Random;
 
 /**
  * Gere a grelha de vóxeis, a geração do terreno e a gestão dos Chunks.

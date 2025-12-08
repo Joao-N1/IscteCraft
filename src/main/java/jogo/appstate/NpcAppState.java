@@ -9,17 +9,12 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import jogo.engine.GameRegistry;
-import jogo.framework.math.Vec3; // Importante para ler a posição
+import jogo.framework.math.Vec3;
 import jogo.gameobject.GameObject;
+import jogo.gameobject.character.*;
 import jogo.gameobject.character.Character;
-import jogo.gameobject.character.Player;
-import jogo.gameobject.character.Sheep;
-import jogo.gameobject.character.Zombie;
-import jogo.gameobject.character.Wolf;
-import jogo.gameobject.character.Trader;
-import jogo.voxel.VoxelWorld;
 import jogo.voxel.VoxelPalette;
-import jogo.system.GameSaveData;
+import jogo.voxel.VoxelWorld;
 
 import java.util.*;
 

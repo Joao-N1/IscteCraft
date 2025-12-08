@@ -17,8 +17,8 @@ import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 import jogo.gameobject.item.DroppedItem;
 import jogo.gameobject.item.ItemStack;
+import jogo.voxel.VoxelPalette;
 import jogo.voxel.VoxelWorld;
-import jogo.voxel.VoxelPalette; // Importante
 
 import java.util.ArrayList;
 import java.util.List;

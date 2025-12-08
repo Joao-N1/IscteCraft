@@ -3,6 +3,7 @@ package jogo.crafting;
 import jogo.gameobject.character.Player;
 import jogo.gameobject.item.ItemStack;
 import jogo.voxel.VoxelPalette;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

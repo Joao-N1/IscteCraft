@@ -1,10 +1,11 @@
 package jogo.system;
 
 import jogo.gameobject.item.ItemStack;
+
 import java.io.Serializable;
-import java.util.ArrayList; // <--- Importante
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;      // <--- Importante
+import java.util.List;
 import java.util.Map;
 
 public class GameSaveData implements Serializable {

@@ -6,15 +6,15 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.asset.AssetManager;
 import com.jme3.font.BitmapFont;
 import com.jme3.font.BitmapText;
-import com.jme3.scene.Node;
-import com.jme3.ui.Picture;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector2f;
+import com.jme3.scene.Node;
+import com.jme3.ui.Picture;
+import jogo.crafting.Recipe;
 import jogo.gameobject.character.Player;
 import jogo.gameobject.item.ItemStack;
+import jogo.system.HighScoreManager;
 import jogo.voxel.VoxelPalette;
-import jogo.crafting.Recipe;
-import jogo.system.HighScoreManager; // Necessário para o Leaderboard
 
 import java.util.ArrayList;
 import java.util.List;

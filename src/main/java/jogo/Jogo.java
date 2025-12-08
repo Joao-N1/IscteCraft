@@ -3,16 +3,10 @@ package jogo;
 import com.jme3.app.SimpleApplication;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.PhysicsSpace;
-import com.jme3.system.AppSettings;
 import com.jme3.math.ColorRGBA;
 import com.jme3.post.FilterPostProcessor;
-import jogo.appstate.InputAppState;
-import jogo.appstate.PlayerAppState;
-import jogo.appstate.WorldAppState;
-import jogo.appstate.HudAppState;
-import jogo.appstate.RenderAppState;
-import jogo.appstate.InteractionAppState;
-import jogo.appstate.NpcAppState;
+import com.jme3.system.AppSettings;
+import jogo.appstate.*;
 import jogo.engine.GameRegistry;
 import jogo.engine.RenderIndex;
 

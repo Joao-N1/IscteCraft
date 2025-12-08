@@ -6,6 +6,8 @@ import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+import com.jme3.post.FilterPostProcessor;
+import com.jme3.post.filters.BloomFilter;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
@@ -17,11 +19,6 @@ import jogo.framework.math.Vec3;
 import jogo.gameobject.GameObject;
 import jogo.gameobject.character.Player;
 import jogo.gameobject.item.Item;
-
-// --- IMPORTS PARA O BRILHO (BLOOM) ---
-import com.jme3.post.FilterPostProcessor;
-import com.jme3.post.filters.BloomFilter;
-// -------------------------------------
 
 import java.util.HashMap;
 import java.util.HashSet;
