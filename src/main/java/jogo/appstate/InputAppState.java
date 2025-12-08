@@ -55,7 +55,7 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
         // Break voxel (left mouse)
         im.addMapping("Break", new MouseButtonTrigger(com.jme3.input.MouseInput.BUTTON_LEFT));
         // Toggle shading (L)
-        im.addMapping("ToggleShading", new KeyTrigger(KeyInput.KEY_L));
+        im.addMapping("ToggleShading", new KeyTrigger(KeyInput.KEY_K));
         // Respawn (R)
         im.addMapping("Respawn", new KeyTrigger(KeyInput.KEY_R));
         // Interact (E)
