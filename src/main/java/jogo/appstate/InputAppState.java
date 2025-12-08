@@ -8,8 +8,10 @@ import com.jme3.input.controls.*;
 import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
 
+// Gerencia o input do jogador, armazenando estados e pedidos de ações(action para ações de clique e o analog para ações contínuas)
 public class InputAppState extends BaseAppState implements ActionListener, AnalogListener {
 
+    //Volatile para eventos de clique e booleans normais para estados contínuos
     private boolean forward, backward, left, right;
     private boolean sprint;
     private volatile boolean jumpRequested;
@@ -34,6 +36,7 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
     @Override
     protected void initialize(Application app) {
         var im = app.getInputManager();
+        //Mapping para mapear as teclas e Listeners para "ouvir" os nomes dos mapeamentos
         // Movement keys
         im.addMapping("MoveForward", new KeyTrigger(KeyInput.KEY_W));
         im.addMapping("MoveBackward", new KeyTrigger(KeyInput.KEY_S));
@@ -63,6 +66,7 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
         im.addMapping("OpenInventory", new KeyTrigger(KeyInput.KEY_I));
         im.addListener(this, "OpenInventory");
 
+        // 1. MAPEAMENTO DAS TECLAS DE 1 A 9
         for (int i = 0; i < 9; i++) {
             // KEY_1 começa no código 0x02. O loop mapeia 1->slot 0, 2->slot 1, etc.
             im.addMapping("HotbarSlot_" + i, new KeyTrigger(KeyInput.KEY_1 + i));
@@ -90,6 +94,7 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
 
     }
 
+    // Limpeza dos mapeamentos e listeners para evitar duplicações
     @Override
     protected void cleanup(Application app) {
         var im = app.getInputManager();
@@ -191,6 +196,8 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
         }
     }
 
+    //Os métodos consumidores dão logo reset ao input para evitar múltiplos processamentos do mesmo evento
+
     public boolean consumeLeaderboardRequest() {
         boolean r = leaderboardRequested;
         leaderboardRequested = false;
@@ -234,6 +241,7 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
         return r;
     }
 
+    //Acumula o quanto o rato se moveu desde o último frame para o PlayerAppState processar e saber quanto virar a câmara
     @Override
     public void onAnalog(String name, float value, float tpf) {
         if (!mouseCaptured) return;
@@ -245,10 +253,11 @@ public class InputAppState extends BaseAppState implements ActionListener, Analo
         }
     }
 
+    // Retorna o vetor de movimento baseado nas teclas pressionadas para o PlayerAppState processar e mover o jogador
     public Vector3f getMovementXZ() {
         float fb = (forward ? 1f : 0f) + (backward ? -1f : 0f);
         float lr = (right ? 1f : 0f) + (left ? -1f : 0f);
-        return new Vector3f(lr, 0f, -fb); // -fb so forward maps to -Z in JME default
+        return new Vector3f(lr, 0f, -fb); // Inverte fb para o eixo Z positivo ser para frente
     }
 
     public boolean isSprinting() {
