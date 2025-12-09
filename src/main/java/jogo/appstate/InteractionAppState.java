@@ -19,18 +19,20 @@ import jogo.voxel.VoxelBlockType;
 import jogo.voxel.VoxelPalette;
 import jogo.voxel.VoxelWorld;
 
+// Gerencia interações do jogador: atacar, interagir, colocar blocos. Liga o jogador ao mundo ao dizer o que acontece quando ele faz algo ao olhar para algo.
 public class InteractionAppState extends BaseAppState {
 
-    private final Node rootNode;
-    private final Camera cam;
-    private final InputAppState input;
-    private final RenderIndex renderIndex;
-    private final WorldAppState world;
-    private float reach = 5.5f;
+    // Referências para "ver" e "tocar" no mundo
+    private final Node rootNode;      // O mundo 3D (para testar colisões)
+    private final Camera cam;         // Os olhos do jogador para saber para onde olha
+    private final InputAppState input; // Para saber se houve teclas pressionadas
+    private final RenderIndex renderIndex; // Para saber que objeto é o modelo 3D
+    private final WorldAppState world;     // Para mudar blocos no mundo
 
-    // Cooldown de ataque
-    private float playerAttackCooldown = 0f;
+    private float reach = 5.5f; // Alcance do braço do jogador em blocos
+    private float playerAttackCooldown = 0f; // Temporizador para o ataque do jogador
 
+    //Construtor para receber referências necessárias
     public InteractionAppState(Node rootNode, Camera cam, InputAppState input, RenderIndex renderIndex, WorldAppState world) {
         this.rootNode = rootNode;
         this.cam = cam;
@@ -44,24 +46,32 @@ public class InteractionAppState extends BaseAppState {
 
     @Override
     public void update(float tpf) {
+        // Se o rato tiver solto ignora cliques no mundo
         if (!input.isMouseCaptured()) return;
 
+        // Diminui o tempo de espera do ataque
         if (playerAttackCooldown > 0) playerAttackCooldown -= tpf;
 
+        // Prepara o raio da visão do jogador
         Vector3f origin = cam.getLocation();
         Vector3f dir = cam.getDirection().normalize();
 
         // --- 1. ATAQUE (Botão Esquerdo) ---
+
+        // input.isBreaking() é true enquanto seguras o botão esquerdo
         if (input.isBreaking() && playerAttackCooldown <= 0) {
             CollisionResults results = new CollisionResults();
             Ray ray = new Ray(origin, dir);
-            ray.setLimit(4.0f);
-            rootNode.collideWith(ray, results);
+            ray.setLimit(4.0f); // Alcance de ataque mais curto
+            rootNode.collideWith(ray, results); // Testa colisões no mundo com o raio
 
             if (results.size() > 0) {
+                // Pega o objeto mais próximo que o raio atingiu
                 Spatial target = results.getClosestCollision().getGeometry();
+                // Verifica que objeto do jogo é esse modelo 3D
                 GameObject obj = findRegistered(target);
 
+                // Verifica se é um NPC (e não o jogador)
                 if (obj instanceof jogo.gameobject.character.Character npc && !(obj instanceof jogo.gameobject.character.Player)) {
                     if (!npc.isDead()) {
 
@@ -77,10 +87,10 @@ public class InteractionAppState extends BaseAppState {
                             }
                         }
 
+                        // Aplica o dano no NPC
                         npc.takeDamage(damage);
-                        // -------------------------------
 
-                        playerAttackCooldown = 0.5f;
+                        playerAttackCooldown = 0.5f; // Espera 0.5s até poder atacar de novo
 
                         // Tocar som de dano (baseado no animal)
                         playNpcHurtSound(npc);
@@ -93,7 +103,8 @@ public class InteractionAppState extends BaseAppState {
         }
 
         // --- 2. INTERAGIR (Tecla E) ---
-        if (input.consumeInteractRequested()) {
+        if (input.consumeInteractRequested()) {// Verifica se carregaste no E (e limpa o pedido)
+            // ... Cria raio e verifica colisões ...
             Ray ray = new Ray(origin, dir);
             ray.setLimit(reach);
             CollisionResults results = new CollisionResults();
@@ -113,8 +124,7 @@ public class InteractionAppState extends BaseAppState {
                 if (obj instanceof Trader) {
                     // --- ALTERAÇÃO: Som de Falar ---
                     playSound("Sounds/TraderTalking.wav");
-                    // -------------------------------
-
+                    // Mostrar legenda
                     jogo.appstate.HudAppState hud = getState(jogo.appstate.HudAppState.class);
                     if (hud != null) {
                         hud.showSubtitle("Trader: 'Bem vindo ao IscteCraft! Acerta todos os alvos no menor tempo possível ao atirar blocos com o G e explora o mundo!! :) .'", 4.0f);
@@ -124,14 +134,16 @@ public class InteractionAppState extends BaseAppState {
             }
 
             // C. Interagir com Blocos
+            // Se o raio não bateu em nenhum modelo 3D (NPC), verifica se bateu no terreno (Vóxeis)
             VoxelWorld vw = world != null ? world.getVoxelWorld() : null;
             if (vw != null) {
-                vw.pickFirstSolid(cam, reach).ifPresent(hit -> {
+                vw.pickFirstSolid(cam, reach).ifPresent(hit -> { // Algoritmo especial para vóxeis
                     VoxelWorld.Vector3i cell = hit.cell;
                     byte blockId = vw.getBlock(cell.x, cell.y, cell.z);
 
+                    // Mesa de Crafting, abre UI
                     if (blockId == jogo.voxel.VoxelPalette.CRAFTING_TABLE_ID) {
-                        input.setMouseCaptured(false);
+                        input.setMouseCaptured(false); // Solta o rato para clicar na UI
                         jogo.appstate.HudAppState hud = getState(jogo.appstate.HudAppState.class);
                         if (hud != null) hud.openCraftingTable();
                     }
@@ -141,13 +153,13 @@ public class InteractionAppState extends BaseAppState {
                         // Se está apagada, substitui pelo bloco ACESO
                         vw.setBlock(cell.x, cell.y, cell.z, jogo.voxel.VoxelPalette.LANTERN_ON_ID);
                         vw.rebuildDirtyChunks(world.getPhysicsSpace());
-                        // Som opcional (reutiliza o do Trader por agora ou adiciona um "click")
-                        // playSound("Sounds/Click.wav");
+                        playSound("Sounds/Click.wav");
                     }
                     else if (blockId == jogo.voxel.VoxelPalette.LANTERN_ON_ID) {
                         // Se está acesa, substitui pelo bloco APAGADO
                         vw.setBlock(cell.x, cell.y, cell.z, jogo.voxel.VoxelPalette.LANTERN_OFF_ID);
                         vw.rebuildDirtyChunks(world.getPhysicsSpace());
+                        playSound("Sounds/Click.wav");
                     }
                 });
             }
@@ -155,23 +167,31 @@ public class InteractionAppState extends BaseAppState {
 
         // --- 3. COLOCAR BLOCO (Botão Direito) ---
         if (input.consumeUseRequested()) {
+
             PlayerAppState playerState = getState(PlayerAppState.class);
             if (playerState == null) return;
 
+            // Verifica o item que o jogador está a segurar
             byte heldId = playerState.getPlayer().getHeldItem();
             if (heldId == 0) return;
 
             VoxelWorld vw = world.getVoxelWorld();
-            VoxelBlockType type = vw.getPalette().get(heldId);
 
+            // Verifica se o bloco é colocável
+            VoxelBlockType type = vw.getPalette().get(heldId);
             if (!type.isPlaceable()) return;
 
             if (vw != null) {
+                // Verifica onde o jogador está a olhar no mundo
                 vw.pickFirstSolid(cam, reach).ifPresent(hit -> {
+                    // Calcular a posição adjacente à face que é atingida
+                    // hit.cell = bloco atingido
+                    // hit.normal = vetor normal da face (cima, lado)
                     int x = hit.cell.x + (int)hit.normal.x;
                     int y = hit.cell.y + (int)hit.normal.y;
                     int z = hit.cell.z + (int)hit.normal.z;
 
+                    // Verifica se o jogador não está a colocar o bloco dentro de si próprio
                     jogo.framework.math.Vec3 pPos = playerState.getPlayer().getPosition();
                     Vector3f playerPos = new Vector3f(pPos.x, pPos.y, pPos.z);
                     Vector3f playerCenter = playerPos.add(0, 0.9f, 0);
@@ -182,6 +202,7 @@ public class InteractionAppState extends BaseAppState {
 
                     if (playerBox.intersects(blockBox)) return;
 
+                    // Coloca o bloco no mundo
                     vw.setBlock(x, y, z, heldId);
                     vw.rebuildDirtyChunks(world.getPhysicsSpace());
                     playerState.getPlayer().consumeHeldItem();
@@ -193,10 +214,11 @@ public class InteractionAppState extends BaseAppState {
 
     // --- MÉTODOS DE SOM ---
 
-    // Método genérico para tocar qualquer ficheiro
+    // Metodo genérico para tocar som
     private void playSound(String soundFile) {
         if (soundFile == null || soundFile.isEmpty()) return;
 
+        // Carrega e toca o som
         AssetManager am = getApplication().getAssetManager();
         try {
             AudioNode audio = new AudioNode(am, soundFile, AudioData.DataType.Buffer);
@@ -209,7 +231,7 @@ public class InteractionAppState extends BaseAppState {
         }
     }
 
-    // Método específico para escolher o som de dano
+    // Metodo específico para escolher o som de dano
     private void playNpcHurtSound(jogo.gameobject.character.Character npc) {
         String soundFile = "";
         if (npc instanceof jogo.gameobject.character.Sheep) {
@@ -224,6 +246,7 @@ public class InteractionAppState extends BaseAppState {
         playSound(soundFile);
     }
 
+    // Procura o GameObject registado para um Spatial, subindo na hierarquia se necessário
     private GameObject findRegistered(Spatial s) {
         Spatial cur = s;
         while (cur != null) {
