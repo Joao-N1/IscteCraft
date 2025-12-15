@@ -5,6 +5,7 @@ import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.texture.Texture2D;
 
+// Classe para blocos simples com textura, dureza, drop e dano ao contato
 public class SimpleBlockType extends VoxelBlockType {
 
     private final String texturePath;

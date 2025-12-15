@@ -8,13 +8,14 @@ import com.jme3.scene.VertexBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+// Utility class to build voxel meshes
 public class MeshBuilder {
-    private final List<Float> positions = new ArrayList<>();
-    private final List<Float> normals = new ArrayList<>();
-    private final List<Float> uvs = new ArrayList<>();
-    private final List<Integer> indices = new ArrayList<>();
+    private final List<Float> positions = new ArrayList<>(); // x,y,z
+    private final List<Float> normals = new ArrayList<>(); //Sombras
+    private final List<Float> uvs = new ArrayList<>(); //Texturas nas faces
+    private final List<Integer> indices = new ArrayList<>(); // Índices dos vértices
 
-    // Optional: enable per-block UV randomization for variety
+    // If true, as texturas das faces serão randomizadas em rotação e flip
     private boolean randomizeUV = false;
 
     public void setRandomizeUV(boolean randomizeUV) {
@@ -22,13 +23,14 @@ public class MeshBuilder {
     }
 
     public int addVertex(Vector3f p, Vector3f n, Vector2f uv) {
-        int idx = positions.size() / 3;
-        positions.add(p.x); positions.add(p.y); positions.add(p.z);
-        normals.add(n.x); normals.add(n.y); normals.add(n.z);
-        uvs.add(uv.x); uvs.add(uv.y);
-        return idx;
+        int idx = positions.size() / 3; //Calcula o índice do vértice
+        positions.add(p.x); positions.add(p.y); positions.add(p.z); // Guarda posição x,y,z
+        normals.add(n.x); normals.add(n.y); normals.add(n.z); // Guarda normal x,y,z
+        uvs.add(uv.x); uvs.add(uv.y); //Guarda textura(uv)
+        return idx; // Retorna o id
     }
 
+    //Cria os triangulos para os quadrados dos cubos
     public void addQuad(Vector3f v0, Vector3f v1, Vector3f v2, Vector3f v3, Vector3f normal) {
         int i0 = addVertex(v0, normal, new Vector2f(0,0));
         int i1 = addVertex(v1, normal, new Vector2f(0,1));
@@ -50,6 +52,7 @@ public class MeshBuilder {
         indices.add(i0); indices.add(i2); indices.add(i3);
     }
 
+    // Transforma UV coordenadas baseado na rotation e flips
     private static Vector2f transformUV(Vector2f uv, int rot, boolean flipU, boolean flipV) {
         float u = uv.x;
         float v = uv.y;
@@ -82,6 +85,8 @@ public class MeshBuilder {
         return new Vector2f(ru + 0.5f, rv + 0.5f);
     }
 
+    // Adiciona uma face de vóxel na posição (x,y,z) com a face especificada
+    //Otimização para não desenhar faces internas não visíveis
     public void addVoxelFace(int x, int y, int z, Face face) {
         float xf = x, yf = y, zf = z;
 
@@ -136,6 +141,7 @@ public class MeshBuilder {
         return h;
     }
 
+    // Constrói o mesh final a partir dos dados coletados
     public Mesh build() {
         Mesh mesh = new Mesh();
         float[] pos = toFloatArray(positions);
@@ -151,6 +157,7 @@ public class MeshBuilder {
         return mesh;
     }
 
+    // Converte uma lista de Float para um array de float primitivo
     private static float[] toFloatArray(List<Float> list) {
         float[] arr = new float[list.size()];
         for (int i = 0; i < arr.length; i++) arr[i] = list.get(i);
@@ -159,6 +166,7 @@ public class MeshBuilder {
 
     public enum Face { PX, NX, PY, NY, PZ, NZ }
 
+    // Normais das faces dos vóxeis
     public static class FaceNormals {
         public static final Vector3f PX = new Vector3f(1,0,0);
         public static final Vector3f NX = new Vector3f(-1,0,0);

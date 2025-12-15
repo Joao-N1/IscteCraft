@@ -5,6 +5,7 @@ import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.texture.Texture2D;
 
+// Classe para representar um tipo simples de item com textura
 public class SimpleItemType extends VoxelBlockType {
     private final String texturePath;
 

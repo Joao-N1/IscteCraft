@@ -23,8 +23,10 @@ public class Chunk {
     private final byte[][][] vox;
     private final Node node;
 
+    // Dirty flag to indicate if the chunk needs to be rebuilt
     private boolean dirty = true;
 
+    // Physics control for the chunk
     private RigidBodyControl rigidBody;
 
     public Chunk(int chunkX, int chunkY, int chunkZ) {
@@ -65,11 +67,9 @@ public class Chunk {
                 for (int z = 0; z < SIZE; z++) {
                     byte id = vox[x][y][z];
 
-                    // --- CORREÇÃO 1: Permitir desenhar Água ---
-                    // Antes: if (!palette.get(id).isSolid()) continue;
-                    // Agora: Só ignora se for AR. Se for Água (não sólida), desenha na mesma.
+                    // --- Permitir desenhar Água ---
+                    // Só ignora se for AR
                     if (id == VoxelPalette.AIR_ID) continue;
-                    // ------------------------------------------
 
                     MeshBuilder builder = builders.get(id);
                     int wx = chunkX * SIZE + x;
@@ -77,8 +77,7 @@ public class Chunk {
                     int wz = chunkZ * SIZE + z;
 
                     // Verifica vizinhos.
-                    // Nota: A água vai desenhar faces se o vizinho não for sólido (Ar) ou se for sólido (Terra).
-                    // Podes refinar isto depois se vires água a desenhar contra água.
+                    // A água vai desenhar faces se o vizinho não for sólido (Ar) ou se for sólido (Terra).
                     if (!isSolid(wx+1,wy,wz,palette)) builder.addVoxelFace(wx,wy,wz, MeshBuilder.Face.PX);
                     if (!isSolid(wx-1,wy,wz,palette)) builder.addVoxelFace(wx,wy,wz, MeshBuilder.Face.NX);
                     if (!isSolid(wx,wy+1,wz,palette)) builder.addVoxelFace(wx,wy,wz, MeshBuilder.Face.PY);
@@ -91,6 +90,7 @@ public class Chunk {
             }
         }
 
+        // Construir Geometries e anexar ao nó
         int geomCount = 0;
         for (Map.Entry<Byte, MeshBuilder> entry : builders.entrySet()) {
             MeshBuilder meshBuilder = entry.getValue();
@@ -104,12 +104,10 @@ public class Chunk {
                 Material mat = type.getMaterial(assetManager, blockPos);
                 g.setMaterial(mat);
 
-                // --- CORREÇÃO 2: Bucket Transparente ---
-                // Se for água, dizemos ao motor para tratar como vidro/água
+                // Transparente (se for o caso)
                 if (type.isTransparent()) {
                     g.setQueueBucket(com.jme3.renderer.queue.RenderQueue.Bucket.Transparent);
                 }
-                // ---------------------------------------
 
                 node.attachChild(g);
                 geomCount++;
@@ -124,7 +122,7 @@ public class Chunk {
      */
     /**
      * Atualiza a física.
-     * ALTERAÇÃO: Agora recebe 'palette' para filtrar blocos não sólidos (água).
+     * Recebe 'palette' para filtrar blocos não sólidos (água).
      */
     public void updatePhysics(PhysicsSpace space, VoxelPalette palette) {
         if (rigidBody != null) {
@@ -142,12 +140,12 @@ public class Chunk {
                 if (node.getChild(i) instanceof Geometry) {
                     Geometry g = (Geometry) node.getChild(i);
 
-                    // O nome da Geometry é "chunk_x_y_z_ID". Vamos extrair o ID.
+                    // O nome da Geometry é "chunk_x_y_z_ID". Extrai o ID.
                     String[] parts = g.getName().split("_");
                     try {
                         byte id = Byte.parseByte(parts[parts.length - 1]);
 
-                        // SÓ adiciona à física se for sólido! (Água é ignorada aqui)
+                        // SÓ adiciona à física se for sólido (Água é ignorada aqui)
                         if (palette.get(id).isSolid()) {
                             Geometry gClone = g.clone(false);
                             gClone.setMesh(g.getMesh().deepClone());

@@ -3,6 +3,7 @@ package jogo.voxel;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 
+// Classe base para tipos de blocos voxel
 public abstract class VoxelBlockType {
     private final String name;
 
@@ -23,7 +24,7 @@ public abstract class VoxelBlockType {
 
     // ... outros métodos ...
 
-    // Novo método: Define se o bloco é transparente (água, vidro)
+    // Define se o bloco é transparente
     // Por defeito é false (opaco)
     public boolean isTransparent() {
         return false;

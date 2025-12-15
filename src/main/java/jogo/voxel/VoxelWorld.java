@@ -74,7 +74,6 @@ public class VoxelWorld {
                     Chunk c = chunks[cx][cy][cz];
 
                     // Otimização: Verificar se o chunk tem algo antes de alocar memória massiva
-                    // (Esta verificação é simplificada, idealmente o Chunk teria uma flag 'isEmpty')
                     byte[][][] chunkData = new byte[Chunk.SIZE][Chunk.SIZE][Chunk.SIZE];
                     boolean hasBlocks = false;
 
@@ -176,11 +175,13 @@ public class VoxelWorld {
         }
     }
 
+    // Garante que não ficam buracos visuais entre chunks quando se parte blocos na borda
     private void markNeighborChunkDirty(int x, int y, int z) {
         Chunk n = getChunk(x, y, z);
         if (n != null) n.markDirty();
     }
 
+    // Gere a lógica de destruir um bloco, protegendo os limites do mapa e a rocha indestrutível.
     public boolean breakAt(int x, int y, int z) {
         if (!inBounds(x,y,z)) return false;
         byte blockId = getBlock(x, y, z);
@@ -201,8 +202,8 @@ public class VoxelWorld {
         final float NOISE_SCALE = 0.03f;
         final int AMPLITUDE = 6;
         final int MAP_LIMIT = 60;
-        final int SAND_WIDTH = 7;
-        final int WATER_WIDTH = 10;
+        final int SAND_WIDTH = 8;
+        final int WATER_WIDTH = 11;
         final int WATER_LEVEL = 16;
         final double CAVE_THRESHOLD = 0.60;
 
@@ -230,14 +231,14 @@ public class VoxelWorld {
                         continue;
                     }
 
-                    // B. Zona de Água (Oceano)
+                    // B. Zona de Água
                     if (dist > MAP_LIMIT + SAND_WIDTH) {
                         if (y <= WATER_LEVEL) setBlock(x, y, z, VoxelPalette.WATER_ID);
                         else setBlock(x, y, z, VoxelPalette.AIR_ID);
                         continue;
                     }
 
-                    // C. Zona de Areia (Praia)
+                    // C. Zona de Areia
                     if (dist > MAP_LIMIT) {
                         if (y <= height) {
                             if (y == height) setBlock(x, y, z, VoxelPalette.SAND_ID);
@@ -278,6 +279,7 @@ public class VoxelWorld {
         System.out.println("Terreno gerado com sucesso!");
     }
 
+    // Gera árvores simples em áreas de relva
     private void generateTrees(long seed, int centerX, int centerZ, int mapLimit) {
         Random random = new Random(seed + 12345);
         int treeChance = 400;
@@ -311,6 +313,7 @@ public class VoxelWorld {
         }
     }
 
+    // Gera árvores espinhosas em áreas de relva
     private void generateSpikyTrees(long seed, int centerX, int centerZ, int mapLimit) {
         Random random = new Random(seed + 67890);
         int treeChance = 1000; // Mais raras
@@ -348,23 +351,25 @@ public class VoxelWorld {
         }
     }
 
+    // Gera veias de minérios no subsolo
     private void generateOreVeins(long seed) {
         Random random = new Random(seed);
         // Densidade: Tentativas por mapa
-        int coalAttempts = 2400;
-        int ironAttempts = 3000;
+        int coalAttempts = 5000;
+        int ironAttempts = 4000;
         int diamondAttempts = 800;
 
         for (int i = 0; i < coalAttempts; i++)
             spawnVein(random, VoxelPalette.COAL_ID, sizeY, 6 + random.nextInt(5));
 
         for (int i = 0; i < ironAttempts; i++)
-            spawnVein(random, VoxelPalette.IRON_ID, 40, 3 + random.nextInt(4)); // Apenas abaixo de Y=40
+            spawnVein(random, VoxelPalette.IRON_ID, 55, 4 + random.nextInt(4)); // Apenas abaixo de Y=40
 
         for (int i = 0; i < diamondAttempts; i++)
             spawnVein(random, VoxelPalette.DIAMOND_ID, 16, 2 + random.nextInt(3)); // Apenas abaixo de Y=16
     }
 
+    // Gera uma veia de minério começando em uma posição aleatória
     private void spawnVein(Random rand, byte oreId, int maxHeight, int size) {
         int x = rand.nextInt(sizeX);
         int z = rand.nextInt(sizeZ);
@@ -382,6 +387,7 @@ public class VoxelWorld {
         }
     }
 
+    //Gera alvos espalhados pelo mapa
     private void generateTargets(long seed) {
         Random random = new Random(seed + 555);
         int targetCount = 20;
@@ -424,6 +430,7 @@ public class VoxelWorld {
         materials.put(VoxelPalette.STONE_ID, makeLitTex(tex, 0.08f, 16f));
     }
 
+    // Cria material iluminado com textura
     private Material makeLitTex(Texture2D tex, float spec, float shininess) {
         Material m = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         m.setTexture("DiffuseMap", tex);
@@ -435,6 +442,7 @@ public class VoxelWorld {
         return m;
     }
 
+    // Aplica flags de renderização ao material
     private void applyRenderFlags(Material m) {
         m.getAdditionalRenderState().setFaceCullMode(culling ? RenderState.FaceCullMode.Back : RenderState.FaceCullMode.Off);
         m.getAdditionalRenderState().setWireframe(wireframe);
@@ -489,6 +497,7 @@ public class VoxelWorld {
                     chunks[cx][cy][cz].clearDirty();
     }
 
+    // Raycast simples para vóxeis sólidos
     public Optional<Hit> pickFirstSolid(Camera cam, float maxDistance) {
         Vector3f origin = cam.getLocation();
         Vector3f dir = cam.getDirection().normalize();
@@ -497,7 +506,7 @@ public class VoxelWorld {
         int y = (int) Math.floor(origin.y);
         int z = (int) Math.floor(origin.z);
 
-        // Algoritmo de Voxel Traversal (DDA)
+        // Algoritmo de Voxel Traversal
         float stepX = dir.x > 0 ? 1 : -1;
         float stepY = dir.y > 0 ? 1 : -1;
         float stepZ = dir.z > 0 ? 1 : -1;
@@ -515,6 +524,7 @@ public class VoxelWorld {
         float t = 0f;
         Vector3f lastNormal = new Vector3f(0,0,0);
 
+        // Percorrer até encontrar um bloco sólido ou ultrapassar a distância máxima
         while (t <= maxDistance) {
             if (tMaxX < tMaxY) {
                 if (tMaxX < tMaxZ) {
@@ -566,6 +576,7 @@ public class VoxelWorld {
         }
     }
 
+    // Alterna entre modos de renderização
     public void toggleRenderDebug() {
         setLit(!lit);
         wireframe = !wireframe;

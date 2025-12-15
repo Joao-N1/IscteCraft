@@ -5,9 +5,11 @@ import jogo.voxel.blocks.AirBlockType;
 import java.util.ArrayList;
 import java.util.List;
 
+// Gerencia o registro e mapeamento de tipos de blocos voxel
 public class VoxelPalette {
     private final List<VoxelBlockType> types = new ArrayList<>();
 
+    // Registra um novo tipo de bloco voxel e retorna seu ID
     public byte register(VoxelBlockType type) {
         types.add(type);
         int id = types.size() - 1;
@@ -23,22 +25,24 @@ public class VoxelPalette {
 
     public int size() { return types.size(); }
 
+    // Cria uma paleta padrão com tipos de blocos comuns
     public static VoxelPalette defaultPalette() {
         VoxelPalette p = new VoxelPalette();
 
         // 0. AR (Especial)
         p.register(new jogo.voxel.blocks.AirBlockType());
 
-        // --- BLOCOS NORMAIS (Substituídos por SimpleBlockType) ---
+        // --- BLOCOS NORMAIS ---
         p.register(new SimpleBlockType("stone",    "StoneBlock.png", 6.0f)); // ID 1
-        p.register(new SimpleBlockType("therock",  "TheRock.png",    999f)); // ID 2 (Indestrutível)
+        p.register(new SimpleBlockType("therock",  "TheRock.png",    9999999999999999999f)); // ID 2
         p.register(new SimpleBlockType("dirt",     "DirtBlock.png",  1.0f)); // ID 3
         p.register(new SimpleBlockType("grass",    "GrassBlock.png", 1.0f)); // ID 4
         p.register(new SimpleBlockType("wood",     "WoodBlock.png",  3.0f)); // ID 5
 
-        // ID 6: Spiky Wood (Tem dano 10)
+        // ID 6: Spiky Wood
         p.register(new SimpleBlockType("spikywood","SpikyWoodBlock.png", 3.0f, (byte)0, 10));
 
+        // ID 7: Leaf
         p.register(new SimpleBlockType("leaf",     "LeafBlock.png",  0.2f)); // ID 7
 
         // --- MINÉRIOS (Hardness + DropID) ---
@@ -48,12 +52,13 @@ public class VoxelPalette {
         // ID 9: Ferro (Dropa o item ID 18)
         p.register(new SimpleBlockType("Iron Block", "IronBlock.png", 8.0f, IRON_MAT_ID));
 
-        // ID 10: Diamante (Podes adicionar drop se quiseres item diamante depois)
+        // ID 10: Diamante
         p.register(new SimpleBlockType("Diamond",    "DiamondBlock.png", 10.0f));
 
+        // ID 11: Tábuas
         p.register(new SimpleBlockType("planks",   "PlanksBlock.png", 4.0f)); // ID 11
 
-        // --- ITENS (SimpleItemType - não placeable) ---
+        // --- ITENS (SimpleItemType, não placeable) ---
         p.register(new SimpleItemType("stick", "Stick.png")); // ID 12
 
         // ID 13: Crafting Table
@@ -81,7 +86,6 @@ public class VoxelPalette {
         p.register(new SimpleItemType("stone_pick", "StonePick.png")); // ID 22
         p.register(new SimpleItemType("iron_pick",  "IronPick.png"));  // ID 23
 
-        // --- NOVOS ---
         // ID 24: Spiky Planks (Dano 10)
         p.register(new SimpleBlockType("Spiky Planks", "SpikyPlankBlock.png", 4.0f, (byte)0, 10));
 
@@ -119,7 +123,6 @@ public class VoxelPalette {
     public static final byte STONE_PICK_ID = 22;
     public static final byte IRON_PICK_ID = 23;
 
-    // NOVOS IDs
     public static final byte SPIKY_PLANKS_ID = 24;
     public static final byte SWORD_ID = 25;
 }
