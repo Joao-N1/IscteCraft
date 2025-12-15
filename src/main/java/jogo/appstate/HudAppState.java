@@ -67,6 +67,7 @@ public class HudAppState extends BaseAppState {
     private Picture craftingBg;
     private final List<Recipe> tableRecipes = new ArrayList<>();
     private final List<Picture> tableRecipeIcons = new ArrayList<>();
+    private jogo.crafting.CraftingManager craftingManager;
 
     // Visualização da Receita Selecionada na Mesa
     private final List<Picture> gridInputIcons = new ArrayList<>(); //As imagens usadas para mostrar visualmente "o que é preciso" na grelha 3x3 da mesa de trabalho.
@@ -123,6 +124,7 @@ public class HudAppState extends BaseAppState {
 
         // 3. Inicializar Crafting (Jogador e Mesa)
         initCraftingSystems();
+        this.craftingManager = new jogo.crafting.CraftingManager();
 
         // 4. Textos
         subtitleText = createText(ColorRGBA.Yellow, 1.2f);
@@ -453,15 +455,13 @@ public class HudAppState extends BaseAppState {
 
     // Tentar craftar a receita ao verificar ingredientes e adicionar o item ao inventário.
     private boolean tryCraft(Player p, Recipe r) {
-        for (ItemStack req : r.inputs) {
-            if (!p.hasItem(req.getId(), req.getAmount())) return false;
+        // O HudAppState apenas "pede" ao gerente para fazer o trabalho
+        boolean sucesso = craftingManager.craft(r, p);
+
+        if (sucesso) {
+            System.out.println("Crafting bem sucedido: " + r.name);
         }
-        if (p.addItem(r.outputId, r.outputCount)) {
-            for (ItemStack req : r.inputs) p.removeItem(req.getId(), req.getAmount());
-            System.out.println("Crafted: " + r.name);
-            return true;
-        }
-        return false;
+        return sucesso;
     }
 
     // Atualizar visuais da grelha de crafting

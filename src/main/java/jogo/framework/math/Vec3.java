@@ -1,5 +1,6 @@
 package jogo.framework.math;
 
+// Classe simples para representar um vetor 3D
 public class Vec3 {
     public float x, y, z;
 
@@ -9,6 +10,7 @@ public class Vec3 {
     public Vec3 set(float x, float y, float z) { this.x = x; this.y = y; this.z = z; return this; }
     public Vec3 set(Vec3 other) { return set(other.x, other.y, other.z); }
 
+    //Adiciona outro vetor a este
     @Override
     public int hashCode() {
         int hash = 7;

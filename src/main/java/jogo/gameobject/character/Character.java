@@ -2,6 +2,7 @@ package jogo.gameobject.character;
 
 import jogo.gameobject.GameObject;
 
+// Classe base para personagens no jogo (Jogadores, NPCs, Inimigos, etc.)
 public abstract class Character extends GameObject {
 
     protected int maxHealth;
@@ -14,8 +15,7 @@ public abstract class Character extends GameObject {
         this.health = 100;
     }
 
-    // ... métodos existentes ...
-
+    // Define a vida atual do personagem
     public void setHealth(int health) {
         this.health = health;
         if (this.health <= 0) {
@@ -26,6 +26,7 @@ public abstract class Character extends GameObject {
         }
     }
 
+    // Define a vida máxima do personagem
     public void setMaxHealth(int max) {
         this.maxHealth = max;
         this.health = max; // Começa com vida cheia
@@ -33,6 +34,7 @@ public abstract class Character extends GameObject {
 
     public int getHealth() { return health; }
 
+    // Método para receber dano
     public void takeDamage(int damage) {
         if (isDead) return;
 
@@ -45,29 +47,25 @@ public abstract class Character extends GameObject {
         }
     }
 
-    public void heal(int amount) {
-        if (isDead) return;
-        this.health += amount;
-        if (health > maxHealth) health = maxHealth;
-    }
-
-    // Método para reviver (Respawn)
+    // Metodo para reviver (Respawn)
     public void respawn() {
         this.health = maxHealth;
         this.isDead = false;
         System.out.println(name + " renasceu!");
     }
 
+    // Metodo chamado quando a vida chega a zero
     protected void die() {
         isDead = true;
         System.out.println(name + " morreu!");
     }
 
+    // Verifica se o personagem está morto
     public boolean isDead() {
         return isDead;
     }
 
-    // Novos métodos (com valores por defeito para não partir código antigo)
+    // Métodos para definir o modelo 3D do personagem
     public String getModelPath() {
         return null; // Se retornar null, o RenderAppState pode usar um cubo genérico
     }

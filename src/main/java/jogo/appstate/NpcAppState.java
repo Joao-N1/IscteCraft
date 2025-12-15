@@ -18,13 +18,17 @@ import jogo.voxel.VoxelWorld;
 
 import java.util.*;
 
+// AppState que gere a lógica dos NPCs (IA, combate, respawn, etc.) e cria corpos físicos para eles
 public class NpcAppState extends BaseAppState {
 
-    private final Node rootNode;
-    private final PhysicsSpace physicsSpace;
-    private final GameRegistry registry;
-    private final PlayerAppState playerState;
+    //Dependências físicas e lógicas
+    private final Node rootNode; // Nó raiz
+    private final PhysicsSpace physicsSpace; // Mundo da física (gravidade, colisões)
+    private final GameRegistry registry; // Registo global de objetos do jogo
+    private final PlayerAppState playerState; // Estado do jogador
 
+    // Mapa que liga lógica a física
+    //Ovelha (Lógica) para Cilindro (física)
     private final Map<Character, BetterCharacterControl> npcControls = new HashMap<>();
     private final Node npcPhysicsNode = new Node("NpcPhysics");
 
@@ -39,6 +43,7 @@ public class NpcAppState extends BaseAppState {
 
     private float gpsTimer = 0f;
 
+    // Construtor com injeção de dependências
     public NpcAppState(Node rootNode, PhysicsSpace physicsSpace, GameRegistry registry, PlayerAppState playerState) {
         this.rootNode = rootNode;
         this.physicsSpace = physicsSpace;
@@ -46,6 +51,7 @@ public class NpcAppState extends BaseAppState {
         this.playerState = playerState;
     }
 
+    // Ciclo de vida do AppState
     @Override
     protected void initialize(Application app) {
         rootNode.attachChild(npcPhysicsNode);
@@ -57,35 +63,39 @@ public class NpcAppState extends BaseAppState {
         if (player == null) return;
 
         // --- 0. GESTÃO DE RESPAWN ---
+        // Percorre a lista de NPCs mortos à espera de renascer
         Iterator<Map.Entry<Character, Float>> it = respawnTimers.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Character, Float> entry = it.next();
             Character npc = entry.getKey();
-            float timeLeft = entry.getValue() - tpf;
+            float timeLeft = entry.getValue() - tpf; // Diminui o tempo
 
             if (timeLeft <= 0) {
-                npc.respawn();
+                // Renasce o NPC
+                npc.respawn(); // Restaura vida e estado
                 if (npcControls.containsKey(npc)) {
+                    // Reativa a física
                     BetterCharacterControl ctrl = npcControls.get(npc);
                     ctrl.setEnabled(true);
                     ctrl.getSpatial().setCullHint(Spatial.CullHint.Inherit);
                     ctrl.setGravity(new Vector3f(0, -20f, 0));
-                    // Correção do erro anterior: converter Vec3 para Vector3f manualmente
+                    // Coloca o NPC no ar acima da sua posição original
                     Vec3 p = npc.getPosition();
                     ctrl.warp(new Vector3f(p.x, 50f, p.z));
                 }
+                // Remove da lista de respawn
                 it.remove();
             } else {
                 entry.setValue(timeLeft);
             }
         }
 
-        // --- GPS (Debug) ---
+        // GPS (Debug)
         gpsTimer += tpf;
         if (gpsTimer >= 10.0f) {
             gpsTimer = 0f;
             Vec3 pp = player.getPosition();
-            System.out.println("\n===== GPS REPORT =====");
+            System.out.println("\n===== NPC GPS =====");
             System.out.println("JOGADOR: " + String.format("%.1f, %.1f, %.1f", pp.x, pp.y, pp.z));
 
             for (Character npc : npcControls.keySet()) {
@@ -100,7 +110,9 @@ public class NpcAppState extends BaseAppState {
         }
 
         // 1. Detetar NOVOS NPCs
+        // Percorrer todos os objetos do registo
         for (GameObject obj : registry.getAll()) {
+            // Se for um NPC e ainda não tiver física, cria
             if (obj instanceof Character npc && !(obj instanceof Player)) {
                 if (!npcControls.containsKey(npc)) {
                     createPhysicsFor(npc);
@@ -113,6 +125,7 @@ public class NpcAppState extends BaseAppState {
         Vector3f playerPos = new Vector3f(pp.x, pp.y, pp.z);
 
         for (Map.Entry<Character, BetterCharacterControl> entry : npcControls.entrySet()) {
+            // Se morto, ignora
             Character npc = entry.getKey();
             BetterCharacterControl control = entry.getValue();
 
@@ -137,6 +150,7 @@ public class NpcAppState extends BaseAppState {
                 continue;
             }
 
+            // Cálculo da direção e distância ao jogador
             Vector3f dirToPlayer = playerPos.subtract(npcPos);
             float distance = dirToPlayer.length();
             dirToPlayer.y = 0;
@@ -163,6 +177,7 @@ public class NpcAppState extends BaseAppState {
 
             // --- ESTADO 1: ATACAR ---
             if (isHostile && distance < 1.5f) {
+                // Para de andar e ataca ao olhar para o jogador
                 control.setWalkDirection(Vector3f.ZERO);
                 control.setViewDirection(dirToPlayer);
 
@@ -174,14 +189,15 @@ public class NpcAppState extends BaseAppState {
             }
             // --- ESTADO 2: PERSEGUIR ---
             else if (distance > 1.5f && distance < 25.0f) {
+                // Corre atrás do jogador
                 dirToPlayer.normalizeLocal();
-                handleAutoJump(control, npcPos, dirToPlayer, distance);
+                handleAutoJump(control, npcPos, dirToPlayer, distance);// Verifica se deve saltar
                 control.setWalkDirection(dirToPlayer.mult(runSpeed));
                 control.setViewDirection(dirToPlayer);
 
                 wanderTimers.put(npc, 0f); // Reset vaguear
             }
-            // --- ESTADO 3: VAGUEAR (Wandering) ---
+            // --- ESTADO 3: WANDERING ---
             else {
                 float wTimer = wanderTimers.getOrDefault(npc, 0f);
                 wTimer -= tpf;
@@ -212,11 +228,12 @@ public class NpcAppState extends BaseAppState {
                     control.setWalkDirection(Vector3f.ZERO);
                 }
             }
-
+            // Atualiza posição lógica do NPC
             npc.setPosition(npcPos.x, npcPos.y, npcPos.z);
         }
     }
 
+    // Verifica se o NPC deve saltar automaticamente
     private void handleAutoJump(BetterCharacterControl control, Vector3f position, Vector3f direction, float distanceToPlayer) {
         Vector3f scanOrigin = position.add(0, 0.5f, 0);
         Vector3f scanTarget = scanOrigin.add(direction.mult(1.2f));
@@ -229,6 +246,7 @@ public class NpcAppState extends BaseAppState {
         }
     }
 
+    // Cria a física para um NPC
     private void createPhysicsFor(Character npc) {
         System.out.println("Criando física para NPC: " + npc.getName());
 
@@ -247,14 +265,13 @@ public class NpcAppState extends BaseAppState {
 
         physicsSpace.add(control);
 
-        // Correção: Converter Vec3 manual
         Vec3 p = npc.getPosition();
         control.warp(new Vector3f(p.x, p.y, p.z));
 
         npcControls.put(npc, control);
     }
 
-    // --- SISTEMA DE SAVE/LOAD DE NPCs ---
+    // SISTEMA DE SAVE/LOAD DE NPCs
 
     public void saveNpcsToData(jogo.system.GameSaveData data) {
         data.npcs.clear();
@@ -278,7 +295,7 @@ public class NpcAppState extends BaseAppState {
     }
 
     public void loadNpcsFromData(jogo.system.GameSaveData data) {
-        // 1. Limpar NPCs atuais (matar/remover todos)
+        // 1. Limpar NPCs atuais
         // Criar cópia da lista para evitar erros de concorrência ao remover
         List<Character> toRemove = new ArrayList<>(npcControls.keySet());
         for (Character npc : toRemove) {
@@ -286,8 +303,7 @@ public class NpcAppState extends BaseAppState {
             BetterCharacterControl ctrl = npcControls.get(npc);
             if (ctrl != null) physicsSpace.remove(ctrl);
 
-            // Remover visual (RenderAppState tratará disto se removermos do registry)
-            // Remover do Registo do jogo
+            // Remover visual e do registo do jogo
             registry.remove(npc);
         }
         npcControls.clear();
@@ -320,6 +336,7 @@ public class NpcAppState extends BaseAppState {
         }
     }
 
+    // Limpeza ao desligar o AppState
     @Override
     protected void cleanup(Application app) {
         npcPhysicsNode.removeFromParent();

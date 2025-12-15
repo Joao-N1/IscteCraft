@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+// Classe para armazenar todos os dados do jogo que precisam ser salvos/carregados
 public class GameSaveData implements Serializable {
     private static final long serialVersionUID = 1L;
 

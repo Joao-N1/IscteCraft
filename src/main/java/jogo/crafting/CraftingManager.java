@@ -8,18 +8,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Gere as receitas e a lógica de criar itens.
- * Agora suporta receitas com múltiplos ingredientes.
- */
+
+//Gere as receitas e a lógica de criar itens.
 public class CraftingManager {
 
+    // Lista de todas as receitas disponíveis
     private final List<Recipe> recipes = new ArrayList<>();
-
+    // Construtor que inicializa as receitas
     public CraftingManager() {
         initRecipes();
     }
-
+    // Inicializa as receitas básicas
     private void initRecipes() {
         // --- RECEITAS BÁSICAS ---
 
@@ -34,18 +33,14 @@ public class CraftingManager {
 
     }
 
+    // Retorna a lista de receitas disponíveis
     public List<Recipe> getRecipes() {
         return Collections.unmodifiableList(recipes);
     }
 
-    /**
-     * Tenta criar o item da receita para o jogador dado.
-     * @param recipe A receita a executar
-     * @param player O jogador que está a fazer crafting
-     * @return true se teve sucesso, false caso contrário
-     */
+    //Tenta criar o item da receita para o jogador dado.
     public boolean craft(Recipe recipe, Player player) {
-        // 1. VERIFICAR: O jogador tem TODOS os materiais necessários?
+        // 1. verifica se o jogador tem todos os materiais necessários
         for (ItemStack requiredItem : recipe.inputs) {
             if (!player.hasItem(requiredItem.getId(), requiredItem.getAmount())) {
                 // Se faltar algum item da lista, cancela

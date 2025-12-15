@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+// Classe responsável por salvar e carregar o estado do jogo
 public class SaveManager {
 
     private static final String SAVE_DIR = "saves/";
@@ -40,6 +41,7 @@ public class SaveManager {
         }).start();
     }
 
+    // Carrega os dados do jogo a partir de um ficheiro de save
     public static GameSaveData loadGame(String saveName) {
         try {
             String path = SAVE_DIR + saveName + ".dat";
@@ -61,6 +63,7 @@ public class SaveManager {
         }
     }
 
+    // Retorna uma lista de nomes de saves disponíveis
     public static List<String> getSaveList() {
         List<String> saves = new ArrayList<>();
         File folder = new File(SAVE_DIR);
@@ -78,7 +81,7 @@ public class SaveManager {
         return saves;
     }
 
-    // --- NOVO: Gerar nome único ---
+    // --- Gerar nome único ---
     public static String generateUniqueSaveName() {
         int id = 1;
         while (true) {

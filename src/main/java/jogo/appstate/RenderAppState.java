@@ -25,15 +25,16 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+// AppState responsável por renderizar os GameObjects na cena (lê o GameRegistry)
 public class RenderAppState extends BaseAppState {
 
-    private final Node rootNode;
-    private final AssetManager assetManager;
-    private final GameRegistry registry;
-    private final RenderIndex renderIndex;
+    private final Node rootNode; // A raiz do mundo 3D
+    private final AssetManager assetManager; // Para carregar modelos e materiais
+    private final GameRegistry registry; // Onde os GameObjects estão registados
+    private final RenderIndex renderIndex; // Para gerir a renderização
 
-    private Node gameNode;
-    private final Map<GameObject, Spatial> instances = new HashMap<>();
+    private Node gameNode; // Nó onde os GameObjects são anexados
+    private final Map<GameObject, Spatial> instances = new HashMap<>(); // Map de objetos para os seus spatials (Geometry/Node)
 
     public RenderAppState(Node rootNode, AssetManager assetManager, GameRegistry registry, RenderIndex renderIndex) {
         this.rootNode = rootNode;
@@ -42,45 +43,49 @@ public class RenderAppState extends BaseAppState {
         this.renderIndex = renderIndex;
     }
 
+
     @Override
     protected void initialize(Application app) {
+        // Criar o nó principal para os objetos do jogo
         gameNode = new Node("GameObjects");
         rootNode.attachChild(gameNode);
 
-        // --- ADICIONAR EFEITO DE BRILHO (BLOOM) AQUI ---
+        // --- ADICIONAR EFEITO DE BRILHO ---
         FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
 
         // GlowMode.Objects faz com que apenas materiais com "GlowMap" ou "GlowColor" brilhem
         BloomFilter bloom = new BloomFilter(BloomFilter.GlowMode.Objects);
-        bloom.setBloomIntensity(2.0f); // Força do brilho
+        bloom.setBloomIntensity(3.0f); // Força do brilho
         bloom.setExposurePower(5.0f);  // O quão longe a luz se espalha
 
         fpp.addFilter(bloom);
-        app.getViewPort().addProcessor(fpp);
-        // -----------------------------------------------
+        app.getViewPort().addProcessor(fpp); // Adiciona o processador de filtros à camera
     }
 
     @Override
     public void update(float tpf) {
-        // Ensure each registered object has a spatial and sync position
+        // Atualizar ou criar spatials para cada GameObject no registry
         var current = registry.getAll();
-        Set<GameObject> alive = new HashSet<>(current);
+        Set<GameObject> alive = new HashSet<>(current); // Copiar para verificar
 
         for (GameObject obj : current) {
+            // Verificar se já existe um Spatial para este objeto
             Spatial s = instances.get(obj);
+            // Se não existir, criar um novo
             if (s == null) {
-                s = createSpatialFor(obj);
+                s = createSpatialFor(obj); // Metodo que cria o Spatial baseado no tipo de GameObject
                 if (s != null) {
-                    gameNode.attachChild(s);
-                    instances.put(obj, s);
-                    renderIndex.register(s, obj);
+                    gameNode.attachChild(s); // Anexar ao nó principal
+                    instances.put(obj, s); // Guardar no map
+                    renderIndex.register(s, obj); // Registar para renderização
                 }
             }
+            // Atualizar a posição do Spatial para corresponder ao GameObject
             if (s != null) {
-                Vec3 p = obj.getPosition();
-                s.setLocalTranslation(new Vector3f(p.x, p.y, p.z));
+                Vec3 p = obj.getPosition(); // Posição do GameObject
+                s.setLocalTranslation(new Vector3f(p.x, p.y, p.z)); // Atualizar posição
             }
-            // --- NOVO: Verificar se está morto ---
+            // ---Verificar se está morto ---
             if (obj instanceof jogo.gameobject.character.Character c) {
                 if (c.isDead()) {
                     // Se estiver morto, esconde o modelo
@@ -92,21 +97,23 @@ public class RenderAppState extends BaseAppState {
             }
         }
 
-        // Cleanup: remove spatials for objects no longer in registry
+        // Remover spatials de objetos que já não existem
         var it = instances.entrySet().iterator();
         while (it.hasNext()) {
             var e = it.next();
+            // Se o objeto não está na lista atual, removê-lo
             if (!alive.contains(e.getKey())) {
                 Spatial s = e.getValue();
-                renderIndex.unregister(s);
-                if (s.getParent() != null) s.removeFromParent();
-                it.remove();
+                renderIndex.unregister(s); // Remover do índice de renderização
+                if (s.getParent() != null) s.removeFromParent(); // Desanexar do nó principal (remove do ecrâ)
+                it.remove(); // Remover do map
             }
         }
     }
 
+    // Cria um Spatial (Geometry ou Node) para o GameObject dado
     private Spatial createSpatialFor(GameObject obj) {
-        // O Player continua a ser especial (cilindro simples)
+        // O Player continua a ser um cilindro simples
         if (obj instanceof Player) {
             Geometry g = new Geometry(obj.getName(), new Cylinder(16, 16, 0.35f, 1.4f, true));
             g.setMaterial(colored(ColorRGBA.Green));
@@ -120,6 +127,7 @@ public class RenderAppState extends BaseAppState {
         }
         // LÓGICA GENÉRICA PARA TODOS OS PERSONAGENS (NPCs)
         else if (obj instanceof jogo.gameobject.character.Character c) {
+            // Obter o caminho do modelo 3D definido na classe do NPC
             String path = c.getModelPath();
 
             if (path != null) {
@@ -128,13 +136,14 @@ public class RenderAppState extends BaseAppState {
                 try {
                     Spatial model = assetManager.loadModel(path);
                     model.setName(obj.getName());
+                    // Ajustar escala e posição conforme definido na classe do NPC
                     model.setLocalScale(c.getModelScale());
                     model.setLocalTranslation(0, c.getModelOffsetY(), 0);
                     npcNode.attachChild(model);
                     return npcNode;
                 } catch (Exception e) {
                     System.out.println("Erro ao carregar modelo para " + obj.getName() + ": " + e.getMessage());
-                    // Fallback: desenha uma caixa se o modelo falhar
+                    // Desenha uma caixa se o modelo falhar
                     Geometry g = new Geometry(obj.getName(), new Box(0.4f, 0.9f, 0.4f));
                     g.setMaterial(colored(ColorRGBA.Red));
                     return g;
@@ -145,6 +154,7 @@ public class RenderAppState extends BaseAppState {
         return null;
     }
 
+    // Cria um material colorido simples
     private Material colored(ColorRGBA color) {
         Material m = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         m.setBoolean("UseMaterialColors", true);
@@ -154,6 +164,7 @@ public class RenderAppState extends BaseAppState {
         return m;
     }
 
+    //Limpa tudo do AppState
     @Override
     protected void cleanup(Application app) {
         if (gameNode != null) {

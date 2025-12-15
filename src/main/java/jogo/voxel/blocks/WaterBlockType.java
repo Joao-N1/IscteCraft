@@ -11,7 +11,7 @@ public class WaterBlockType extends VoxelBlockType {
     public WaterBlockType() { super("water"); }
 
     @Override
-    public boolean isSolid() { return false; } // O player atravessa!
+    public boolean isSolid() { return false; } // O player atravessa
 
     @Override
     public boolean isTransparent() {
@@ -19,7 +19,7 @@ public class WaterBlockType extends VoxelBlockType {
     }
 
     @Override
-    public int getContactDamage() { return 50; } // Mata rápido (afogado)
+    public int getContactDamage() { return 50; } // Mata "afogado"
 
     @Override
     public Material getMaterial(AssetManager assetManager) {
@@ -27,7 +27,7 @@ public class WaterBlockType extends VoxelBlockType {
         Material m = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         m.setTexture("DiffuseMap", tex);
         m.setBoolean("UseMaterialColors", true);
-        m.setColor("Diffuse", new ColorRGBA(0.2f, 0.4f, 0.8f, 0.6f)); // Azul transparente
+        m.setColor("Diffuse", new ColorRGBA(0.2f, 0.4f, 0.8f, 0.6f));
 
         // Configurar transparência
         m.getAdditionalRenderState().setBlendMode(BlendMode.Alpha);

@@ -63,27 +63,20 @@ public class Jogo extends SimpleApplication {
         PlayerAppState player = new PlayerAppState(rootNode, assetManager, cam, input, physicsSpace, world);
         stateManager.attach(player);
 
-        // --- NOVO: Adicionar Sistema de NPCs ---
-        // (Precisamos de passar o registry e o playerState)
+        // --- Adicionar Sistema de NPCs ---
+        // AppState que gere NPCs
         NpcAppState npcState = new NpcAppState(rootNode, physicsSpace, registry, player);
         stateManager.attach(npcState);
 
-        // --- NOVO: Spawnar uma Ovelha de Teste ---
+        // --- Spawnar uma Ovelha ---
         jogo.gameobject.character.Sheep ovelha = new jogo.gameobject.character.Sheep();
-        // Colocar perto do spawn do jogador
         ovelha.setPosition(80.0f, 25f, 80.0f);
         registry.add(ovelha);
-        // -----------------------------------------
-        // ... (código da ovelha) ...
 
         // --- Criar Zombie ---
         jogo.gameobject.character.Zombie zombie = new jogo.gameobject.character.Zombie();
-        zombie.setPosition(160, 25, 160); // Nasce noutro lado
+        zombie.setPosition(160, 25, 160);
         registry.add(zombie);
-        // --------------------
-        // ... (resto do código: Post-processing, HUD) ...
-
-        // ... (outros spawns) ...
 
         // --- Criar Lobo ---
         jogo.gameobject.character.Wolf lobo = new jogo.gameobject.character.Wolf();

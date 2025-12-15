@@ -2,6 +2,7 @@ package jogo.gameobject.character;
 
 import jogo.gameobject.item.ItemStack;
 
+// Classe que representa o jogador, com inventário e hotbar
 public class Player extends Character {
 
     private ItemStack[] hotbar = new ItemStack[9];
@@ -15,14 +16,15 @@ public class Player extends Character {
         setMaxHealth(100);
     }
 
+    // Adiciona um item ao inventário (tenta empilhar ou colocar em novo slot)
     public boolean addItem(byte id, int amount) {
         if (amount <= 0) return false;
 
-        // 1. & 2. Tentar empilhar em slots existentes (Hotbar depois Main)
+        // Tentar empilhar em slots existentes (Hotbar depois Main)
         if (tryStackItem(hotbar, id, amount)) return true;
         if (tryStackItem(mainInventory, id, amount)) return true;
 
-        // 3. & 4. Tentar colocar em slots vazios (Hotbar depois Main)
+        // Tentar colocar em slots vazios (Hotbar depois Main)
         if (trynNewSlot(hotbar, id, amount)) return true;
         if (trynNewSlot(mainInventory, id, amount)) return true;
 
@@ -30,7 +32,7 @@ public class Player extends Character {
         return false;
     }
 
-    // Auxiliar: Tenta empilhar num array específico
+    // Tenta empilhar num array específico
     private boolean tryStackItem(ItemStack[] inv, byte id, int amount) {
         for (ItemStack stack : inv) {
             if (stack != null && stack.getId() == id && !stack.isFull()) {
@@ -48,7 +50,7 @@ public class Player extends Character {
         return false;
     }
 
-    // Auxiliar: Tenta criar novo slot num array específico
+    // Tenta criar novo slot num array específico
     private boolean trynNewSlot(ItemStack[] inv, byte id, int amount) {
         for (int i = 0; i < inv.length; i++) {
             if (inv[i] == null) {
@@ -70,7 +72,7 @@ public class Player extends Character {
         this.selectedSlot = slot;
     }
 
-    // Retorna o ID do bloco na mão para sabermos o que colocar no mundo
+    // Retorna o ID do bloco na mão para saber o que colocar no mundo
     public byte getHeldItem() {
         if (hotbar[selectedSlot] != null && hotbar[selectedSlot].getAmount() > 0) {
             return hotbar[selectedSlot].getId();
@@ -78,7 +80,7 @@ public class Player extends Character {
         return 0;
     }
 
-    // Remove 1 item da mão (usado quando colocas um bloco)
+    // Remove 1 item da mão do jogador
     public void consumeHeldItem() {
         if (hotbar[selectedSlot] != null) {
             hotbar[selectedSlot].add(-1); // Retira 1
@@ -100,7 +102,7 @@ public class Player extends Character {
     }
 
 
-    // Verifica se tem quantidade suficiente de um item (procura em todo o inventário)
+    // Verifica se tem quantidade suficiente de um item (procura no inventario todo)
     public boolean hasItem(byte id, int amount) {
         int count = 0;
         // Verificar Hotbar
@@ -130,6 +132,7 @@ public class Player extends Character {
         }
     }
 
+    // Remove itens de um array específico, retorna o que sobrou para remover
     private int removeFromInventory(ItemStack[] inventory, byte id, int amountToRemove) {
         for (int i = 0; i < inventory.length; i++) {
             if (amountToRemove <= 0) break;

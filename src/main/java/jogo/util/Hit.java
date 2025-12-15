@@ -3,6 +3,7 @@ package jogo.util;
 import com.jme3.math.Vector3f;
 import jogo.voxel.VoxelWorld.Vector3i;
 
+// Classe para representar uma colisão com um voxel
 public class Hit {
     public final Vector3i cell;
     public final Vector3f normal;

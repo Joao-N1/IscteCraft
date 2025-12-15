@@ -16,7 +16,7 @@ public class AirBlockType extends VoxelBlockType {
 
     @Override
     public Material getMaterial(AssetManager assetManager) {
-        // Air is invisible, so return null (or could return a transparent material if needed)
+        // Air is invisible, so return null
         return null;
     }
 }

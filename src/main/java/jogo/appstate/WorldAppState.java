@@ -23,26 +23,28 @@ import jogo.voxel.VoxelWorld;
 import java.util.ArrayList;
 import java.util.List;
 
+// AppState que gere o mundo voxel, incluindo a lógica de quebra de blocos e drops
 public class WorldAppState extends BaseAppState {
+    // Referências principais
+    private final Node rootNode; // Nó raiz do mundo 3D
+    private final AssetManager assetManager; // Para carregar materiais e modelos
+    private final PhysicsSpace physicsSpace; // Espaço de física do jogo para colisões
+    private final Camera cam; // Câmera do jogador para raycasting
+    private final InputAppState input; // AppState de input para ler ações do jogador como quebra de blocos
+    private PlayerAppState playerAppState; // Referência ao PlayerAppState para interações com o jogador como saber o item na mão
 
-    private final Node rootNode;
-    private final AssetManager assetManager;
-    private final PhysicsSpace physicsSpace;
-    private final Camera cam;
-    private final InputAppState input;
-    private PlayerAppState playerAppState;
+    // Lógica de quebra de blocos
+    private float breakTimer = 0f; // Temporizador para medir o tempo a quebrar um bloco
+    private VoxelWorld.Vector3i lastTargetBlock = null; // Último bloco alvo que o jogador está a tentar quebrar
 
-    private float breakTimer = 0f;
-    private VoxelWorld.Vector3i lastTargetBlock = null;
+    // Nó do mundo e VoxelWorld
+    private Node worldNode; // Nó principal do mundo
+    private VoxelWorld voxelWorld; // O mundo voxel em si
+    private com.jme3.math.Vector3f spawnPosition; // Posição recomendada para spawn do jogador
 
-    // world root for easy cleanup
-    private Node worldNode;
-    private VoxelWorld voxelWorld;
-    private com.jme3.math.Vector3f spawnPosition;
-
-    // Lista de Itens
-    private final List<DroppedItem> droppedItems = new ArrayList<>();
-    private Node droppedItemsNode = new Node("DroppedItems");
+    // Lista de Itens soltos no chão
+    private final List<DroppedItem> droppedItems = new ArrayList<>(); // Itens atualmente no chão
+    private Node droppedItemsNode = new Node("DroppedItems"); // Nó para agrupar itens soltos
 
     public WorldAppState(Node rootNode, AssetManager assetManager, PhysicsSpace physicsSpace, Camera cam, InputAppState input) {
         this.rootNode = rootNode;
@@ -59,22 +61,22 @@ public class WorldAppState extends BaseAppState {
     @Override
     protected void initialize(Application app) {
         worldNode = new Node("World");
-        rootNode.attachChild(worldNode);
+        rootNode.attachChild(worldNode); // Anexar o nó do mundo à cena principal
 
-        // --- CORREÇÃO DO ERRO: Inicializar o mundo PRIMEIRO ---
+        // 1. Criar o VoxelWorld
         voxelWorld = new VoxelWorld(assetManager, 256, 64, 256);
         voxelWorld.generateLayers();
         voxelWorld.buildMeshes();
         voxelWorld.clearAllDirtyFlags();
 
-        // SÓ AGORA é que podemos anexar o nó, porque o voxelWorld já existe
+        // 2. Anexar o nó do VoxelWorld ao nó do mundo
         worldNode.attachChild(voxelWorld.getNode());
         voxelWorld.buildPhysics(physicsSpace);
 
-        // Anexar nó dos itens soltos
+        // 3. Nó para itens soltos
         rootNode.attachChild(droppedItemsNode);
 
-        // Lighting
+        // 4. Adicionar luzes básicas
         AmbientLight ambient = new AmbientLight();
         ambient.setColor(ColorRGBA.White.mult(0.05f));
         worldNode.addLight(ambient);
@@ -84,10 +86,10 @@ public class WorldAppState extends BaseAppState {
         sun.setColor(ColorRGBA.White.mult(1.3f));
         worldNode.addLight(sun);
 
-        // compute recommended spawn
         spawnPosition = voxelWorld.getRecommendedSpawn();
     }
 
+    // Devolve a posição recomendada para spawn do jogador
     public com.jme3.math.Vector3f getRecommendedSpawnPosition() {
         return spawnPosition != null ? spawnPosition.clone() : new com.jme3.math.Vector3f(25.5f, 12f, 25.5f);
     }
@@ -96,33 +98,38 @@ public class WorldAppState extends BaseAppState {
         return voxelWorld;
     }
 
+
     public PhysicsSpace getPhysicsSpace() {
         return physicsSpace;
     }
 
     @Override
     public void update(float tpf) {
-        // 1. Atualizar itens no chão (rodar/tempo)
+        // Atualizar itens no chão (rodar/tempo)
         for (DroppedItem item : droppedItems) {
             item.update(tpf);
         }
 
+        // Lógica de quebra de blocos
         if (input == null || !input.isMouseCaptured()) {
             breakTimer = 0f;
             lastTargetBlock = null;
             return;
         }
 
+        // Alternar debug de renderização
         if (input.consumeToggleShadingRequested()) {
             voxelWorld.toggleRenderDebug();
         }
 
+        // Se o jogador não está a tentar partir blocos, reiniciar o temporizador
         if (!input.isBreaking()) {
             breakTimer = 0f;
             lastTargetBlock = null;
             return;
         }
 
+        // Raycast para encontrar o bloco alvo
         var pick = voxelWorld.pickFirstSolid(cam, 6f);
         if (pick.isEmpty()) {
             breakTimer = 0f;
@@ -130,9 +137,11 @@ public class WorldAppState extends BaseAppState {
             return;
         }
 
+        // Obter o bloco alvo atual
         var hit = pick.get();
         VoxelWorld.Vector3i currentTarget = hit.cell;
 
+        // Verificar se é o mesmo bloco que antes
         if (lastTargetBlock != null &&
                 currentTarget.x == lastTargetBlock.x &&
                 currentTarget.y == lastTargetBlock.y &&
@@ -143,6 +152,7 @@ public class WorldAppState extends BaseAppState {
             breakTimer = tpf;
         }
 
+        // Obter o tipo do bloco alvo
         byte blockId = voxelWorld.getBlock(currentTarget.x, currentTarget.y, currentTarget.z);
         var blockType = voxelWorld.getPalette().get(blockId);
 
@@ -163,15 +173,15 @@ public class WorldAppState extends BaseAppState {
         }
 
         // Aplicar o multiplicador ao tempo decorrido
-        // Se tiveres picareta, o tempo "passa mais depressa" para o bloco, partindo-o logo.
         breakTimer += tpf * speedMultiplier;
-        // ---------------------------
 
+        // Se o temporizador excedeu a dureza do bloco, quebrá-lo
         if (breakTimer >= blockType.getHardness()) {
 
-            // --- LÓGICA DE DANO CORRIGIDA (Com som) ---
+            // --- LÓGICA DE DANO ---
             if (blockId == VoxelPalette.SpikyWood_ID) {
                 if (playerAppState != null) {
+                    // Verificar o item na mão do jogador
                     jogo.appstate.HudAppState hud = getState(jogo.appstate.HudAppState.class);
                     int slot = hud != null ? hud.getSelectedSlotIndex() : 0;
                     ItemStack itemInHand = playerAppState.getPlayer().getHotbar()[slot];
@@ -190,35 +200,32 @@ public class WorldAppState extends BaseAppState {
 
                     // Se NÃO for ferramenta (mão vazia ou a segurar blocos), dá dano
                     if (!isTool) {
-                        // Chama o método no PlayerAppState que criámos antes
-                        // Se ainda não tens este método, vê o passo 2 abaixo
                         playerAppState.takeDamage(5);
                     }
                 }
             }
+            // Partir o bloco
             if (voxelWorld.breakAt(currentTarget.x, currentTarget.y, currentTarget.z)) {
                 voxelWorld.rebuildDirtyChunks(physicsSpace);
                 if (playerAppState != null) {
                     playerAppState.refreshPhysics();
                     System.out.println("Bloco partido: " + blockType.getName());
 
-                    // --- CORREÇÃO DO DROP ---
-                    // Verificar se o bloco define um drop específico (ex: Minério de Ferro -> Item Ferro)
+                    // Verificar se o bloco define um drop específico
                     byte dropId = blockType.getDropItem();
 
-                    // Se getDropItem() devolver 0, significa que dropa o próprio bloco (comportamento padrão)
+                    // Se getDropItem() devolver 0, significa que dropa o próprio bloco
                     if (dropId == 0) {
                         dropId = blockId;
                     }
 
-                    // --- CORREÇÃO DO DROP ---
                     // Em vez de dar diretamente ao jogador, atiramos para o chão!
                     spawnDroppedItem(
                             new Vector3f(currentTarget.x + 0.5f, currentTarget.y + 0.5f, currentTarget.z + 0.5f),
-                            new Vector3f(0, 3f, 0), // Salta um bocadinho para cima
+                            new Vector3f(0, 3f, 0), // Salta um bocado para cima
                             new ItemStack(dropId, 1)
                     );
-                    // ------------------------
+
                 }
                 breakTimer = 0f;
                 lastTargetBlock = null;
@@ -226,7 +233,7 @@ public class WorldAppState extends BaseAppState {
         }
     }
 
-    // --- MÉTODO PARA SPAWNAR ITEM ---
+    // --- METODO PARA SPAWNAR ITEM ---
     public void spawnDroppedItem(Vector3f position, Vector3f velocity, ItemStack stack) {
         if (stack == null || stack.getAmount() <= 0) return;
 
@@ -259,7 +266,7 @@ public class WorldAppState extends BaseAppState {
         droppedItems.add(new DroppedItem(itemNode, phy, stack));
     }
 
-    // Método para remover item do mundo (quando apanhado)
+    // Metodo para remover item do mundo (quando apanhado)
     public void removeDroppedItem(DroppedItem item) {
         physicsSpace.remove(item.getPhysics());
         item.getNode().removeFromParent();

@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
+// Classe utilitária para gerar texturas procedurais
 public final class ProcTextures {
     private ProcTextures() {}
 

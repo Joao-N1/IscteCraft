@@ -15,9 +15,9 @@ public class LanternOnBlockType extends VoxelBlockType {
         Material m = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         m.setTexture("DiffuseMap", tex);
 
-        // Faz a lanterna brilhar intensamente (auto-iluminação)
+        // Faz a lanterna brilhar intensamente
         m.setTexture("GlowMap", tex);
-        m.setColor("GlowColor", ColorRGBA.White); // A cor do brilho
+        m.setColor("GlowColor", ColorRGBA.White);
 
         m.setBoolean("UseMaterialColors", true);
         m.setColor("Diffuse", ColorRGBA.White);
@@ -26,6 +26,4 @@ public class LanternOnBlockType extends VoxelBlockType {
         return m;
     }
 
-    // Opcional: Define que emite luz se implementares o sistema de luz no futuro
-    // @Override public int getLightLevel() { return 15; }
 }

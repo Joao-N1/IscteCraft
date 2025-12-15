@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
 
+// Gerenciador de High Scores para minijogos
 public class HighScoreManager {
     private static final String SCORE_FILE = "highscores.dat";
     private static final int MAX_SCORES = 5; // Top 5

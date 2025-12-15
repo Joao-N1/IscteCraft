@@ -25,29 +25,32 @@ import jogo.voxel.VoxelWorld;
 import java.util.ArrayList;
 import java.util.List;
 
+// AppState que gere o jogador: movimento, câmara, inventário, dano, respawn, etc.
 public class PlayerAppState extends BaseAppState {
 
+    // Referências aos sistemas principais
     private final Node rootNode;
     private final AssetManager assetManager;
-    private final Camera cam;
-    private final InputAppState input;
-    private final PhysicsSpace physicsSpace;
-    private final WorldAppState world;
+    private final Camera cam; // câmera principal
+    private final InputAppState input; // sistema de input
+    private final PhysicsSpace physicsSpace; // espaço físico
+    private final WorldAppState world; // estado do mundo
 
-    private Node playerNode;
-    private BetterCharacterControl characterControl;
-    private Player player;
+    //Entidades do jogador
+    private Node playerNode; // nó principal do jogador
+    private BetterCharacterControl characterControl; // controle físico do jogador
+    private Player player; //Classe de lógica do jogador como a vida, inventário, etc.
 
     // view angles
-    private float yaw = 0f;
-    private float pitch = 0f;
+    private float yaw = 0f; // horizontal rotation
+    private float pitch = 0f; // vertical rotation
 
     private final float RESPAWN_PROTECTION_TIME = 3.0f;
     private float damageCooldown = 0f;
     private final float INVULNERABILITY_TIME = 1.0f;
 
     // tuning
-    private float moveSpeed = 8.0f; // m/s
+    private float moveSpeed = 8.0f;
     private float sprintMultiplier = 1.7f;
     private float mouseSensitivity = 40f; // degrees per mouse analog unit
     private float eyeHeight = 1.7f;
@@ -63,10 +66,12 @@ public class PlayerAppState extends BaseAppState {
 
     private String currentSaveFileName;
 
+
     public Player getPlayer() {
         return player;
     }
 
+    // Constructor
     public PlayerAppState(Node rootNode, AssetManager assetManager, Camera cam, InputAppState input, PhysicsSpace physicsSpace, WorldAppState world) {
         this.rootNode = rootNode;
         this.assetManager = assetManager;
@@ -77,9 +82,10 @@ public class PlayerAppState extends BaseAppState {
         world.registerPlayerAppState(this);
     }
 
+    // MÉTODOS PRINCIPAIS
     @Override
     protected void initialize(Application app) {
-        // query world for recommended spawn now that it should be initialized
+
         if (world != null) {
             spawnPosition = world.getRecommendedSpawnPosition();
         }
@@ -87,7 +93,7 @@ public class PlayerAppState extends BaseAppState {
         playerNode = new Node("Player");
         rootNode.attachChild(playerNode);
 
-        // Engine-neutral player entity (no engine visuals here)
+        // Lógica do Jogador
         player = new Player();
 
         // BetterCharacterControl(radius, height, mass)
@@ -97,7 +103,7 @@ public class PlayerAppState extends BaseAppState {
         playerNode.addControl(characterControl);
         physicsSpace.add(characterControl);
 
-        // Local light source that follows the player's head
+        // Configuração da Luz do Jogador
         playerLight = new PointLight();
         playerLight.setColor(new com.jme3.math.ColorRGBA(1.2f, 1.2f, 1.1f, 1f));
         playerLight.setRadius(30f);
@@ -105,15 +111,15 @@ public class PlayerAppState extends BaseAppState {
 
         // --- Configuração do Som de Dano ---
         audioHurt = new AudioNode(assetManager, "Sounds/Hurt_Sound_Effect.wav", AudioData.DataType.Buffer);
-        audioHurt.setPositional(false);
+        audioHurt.setPositional(false); // som 2D
         audioHurt.setLooping(false);
         audioHurt.setVolume(3.0f);
         playerNode.attachChild(audioHurt);
 
-        this.currentSaveFileName = SaveManager.generateUniqueSaveName();
+        this.currentSaveFileName = SaveManager.generateUniqueSaveName();// Novo jogo por defeito
         System.out.println("Novo jogo iniciado. Ficheiro de destino: " + this.currentSaveFileName);
 
-        // Spawn at recommended location
+        // Spawn inicial
         respawn();
 
         // initialize camera
@@ -124,13 +130,14 @@ public class PlayerAppState extends BaseAppState {
         // Obter referência para o HUD para atualizar a vida
         hud = getState(HudAppState.class);
 
-        // CORREÇÃO 1: Usar setMaxHealth em vez de setHealth
+        // Definir vida máxima do jogador
         if(player != null) {
             player.setMaxHealth(100); // Isto define Max e Current para 100
         }
         updateHud();
     }
 
+    // Atualização por frame
     @Override
     public void update(float tpf) {
 
@@ -165,7 +172,7 @@ public class PlayerAppState extends BaseAppState {
             }
         }
 
-// --- LÓGICA DE CARREGAR SAVE ESPECÍFICO (F1, F2...) ---
+        // --- LÓGICA DE CARREGAR SAVE ESPECÍFICO (F1, F2...) ---
         int saveIndex = input.consumeLoadSelection();
         if (saveIndex != -1) {
             List<String> saves = SaveManager.getSaveList();
@@ -180,7 +187,7 @@ public class PlayerAppState extends BaseAppState {
             respawn();
         }
 
-        // Sincronizar Posição
+        // Atualizar posição do jogador na classe Player
         if (playerNode != null && player != null) {
             Vector3f physPos = playerNode.getWorldTranslation();
             player.setPosition(physPos.x, physPos.y, physPos.z);
@@ -207,7 +214,7 @@ public class PlayerAppState extends BaseAppState {
 
         // --- 2. APANHAR ITENS (Colisão) ---
         if (world != null) {
-            // Percorrer lista de itens no chão (usar cópia para evitar erro de concorrência)
+            // Percorrer lista de itens no chão
             List<DroppedItem> items = new ArrayList<>(world.getDroppedItems());
             Vector3f playerPos = playerNode.getWorldTranslation().add(0, 1f, 0); // Centro do corpo
 
@@ -221,7 +228,6 @@ public class PlayerAppState extends BaseAppState {
                         // Se coube, remover do mundo
                         world.removeDroppedItem(item);
                         System.out.println("Apanhaste item!");
-                        // Opcional: Tocar som "Pop"
                     }
                 }
             }
@@ -258,9 +264,10 @@ public class PlayerAppState extends BaseAppState {
             float degY = md.y * mouseSensitivity;
             yaw -= degX * FastMath.DEG_TO_RAD;
             pitch -= degY * FastMath.DEG_TO_RAD;
+            //Limitar angulo vertical
             pitch = FastMath.clamp(pitch, -FastMath.HALF_PI * 0.99f, FastMath.HALF_PI * 0.99f);
         }
-        // --- LÓGICA DE TERRENO (Speed) ---
+        // --- LÓGICA DE TERRENO ---
         float currentSpeed = 8.0f; // Velocidade base normal
 
         if (playerNode != null && world != null) {
@@ -275,7 +282,7 @@ public class PlayerAppState extends BaseAppState {
                 byte blockId = vw.getBlock(x, y, z);
 
                 if (blockId == VoxelPalette.SAND_ID) {
-                    currentSpeed = 4.0f; // Metade da velocidade na areia
+                    currentSpeed = 4.0f; // Reduzir velocidade na areia
                 }
             }
         }
@@ -288,8 +295,8 @@ public class PlayerAppState extends BaseAppState {
         if (wish.lengthSquared() > 0f) {
             dir = computeWorldMove(wish).normalizeLocal();
         }
-        float speed = moveSpeed * (input.isSprinting() ? sprintMultiplier : 1f);
-        characterControl.setWalkDirection(dir.mult(speed));
+        float speed = moveSpeed * (input.isSprinting() ? sprintMultiplier : 1f); // aplicar sprint
+        characterControl.setWalkDirection(dir.mult(speed)); // definir direção de movimento
 
         // Jump
         if (input.consumeJumpRequested() && characterControl.isOnGround()) {
@@ -304,12 +311,13 @@ public class PlayerAppState extends BaseAppState {
         checkEnvironmentalDamage(tpf);
     }
 
+    // --- SISTEMA DE SAVE/LOAD ---
     private void performSave(String saveName) {
         if (hud != null) hud.showSubtitle("A Gravar...", 2.0f);
 
-        GameSaveData data = new GameSaveData();
+        GameSaveData data = new GameSaveData(); // novo objeto de dados
 
-        // 1. Jogador (Igual)
+        // 1. Jogador (posição, rotação, inventário)
         Vector3f pos = playerNode.getWorldTranslation();
         data.playerX = pos.x; data.playerY = pos.y; data.playerZ = pos.z;
         data.rotPitch = this.pitch; data.rotYaw = this.yaw;
@@ -317,18 +325,18 @@ public class PlayerAppState extends BaseAppState {
         data.hotbar = player.getHotbar();
         data.mainInventory = player.getMainInventory();
 
-        // 2. Mundo (Igual)
+        // 2. Mundo
         if (world != null && world.getVoxelWorld() != null) {
             world.getVoxelWorld().saveChunksToData(data);
         }
 
-        // --- 3. NOVO: Salvar NPCs ---
+        // 3. Salvar NPCs
         NpcAppState npcState = getState(NpcAppState.class);
         if (npcState != null) {
             npcState.saveNpcsToData(data);
         }
 
-        // --- 4. MINIJOGO (NOVO) ---
+        // 4. MINIJOGO
         MiniGameAppState miniGame = getState(MiniGameAppState.class);
         if (miniGame != null) {
             miniGame.saveStateToData(data);
@@ -359,17 +367,17 @@ public class PlayerAppState extends BaseAppState {
         if(data.hotbar != null) System.arraycopy(data.hotbar, 0, player.getHotbar(), 0, 9);
         if(data.mainInventory != null) System.arraycopy(data.mainInventory, 0, player.getMainInventory(), 0, 27);
 
-        // 2. Mundo ...
+        // 2. Mundo
         if (world != null && world.getVoxelWorld() != null) {
             world.getVoxelWorld().loadChunksFromData(data);
             world.getVoxelWorld().rebuildDirtyChunks(world.getPhysicsSpace());
         }
 
-        // 3. NPCs ...
+        // 3. NPCs
         NpcAppState npcState = getState(NpcAppState.class);
         if (npcState != null) npcState.loadNpcsFromData(data);
 
-        // --- 4. MINIJOGO (NOVO) ---
+        // 4. MINIJOGO
         MiniGameAppState miniGame = getState(MiniGameAppState.class);
         if (miniGame != null) {
             miniGame.loadStateFromData(data);
@@ -385,9 +393,10 @@ public class PlayerAppState extends BaseAppState {
     }
 
 
-    // --- DANO AMBIENTAL ---
+    // DANO AMBIENTAL
+    // Verifica se o jogador está em contacto com blocos que causam dano
     private void checkEnvironmentalDamage(float tpf) {
-        if (damageCooldown > 0) {
+        if (damageCooldown > 0) { // invulnerabilidade temporária
             damageCooldown -= tpf;
             return;
         }
@@ -418,6 +427,7 @@ public class PlayerAppState extends BaseAppState {
         }
     }
 
+    // Verifica se o bloco na posição dada causa dano ao jogador
     private boolean checkBlockDamage(VoxelWorld vw, int x, int y, int z) {
         byte id = vw.getBlock(x, y, z);
         if (id == VoxelPalette.AIR_ID) return false;
@@ -436,18 +446,18 @@ public class PlayerAppState extends BaseAppState {
     // --- SISTEMA DE DANO ---
 
     public void takeDamage(int amount) {
-        if (damageCooldown > 0) return;
+        if (damageCooldown > 0) return; // invulnerabilidade temporária
 
         if (audioHurt != null) {
-            audioHurt.playInstance();
+            audioHurt.playInstance(); // Toca o som de dano
         }
 
-        // CORREÇÃO 2: Usar o método da classe Character
+        //Reduz vida
         player.takeDamage(amount);
 
         System.out.println("Dano: " + amount + ". Vida atual: " + player.getHealth());
 
-        updateHud();
+        updateHud(); // Atualiza os corações no HUD
 
         if (player.isDead()) {
             System.out.println("Jogador morreu!");
@@ -463,11 +473,11 @@ public class PlayerAppState extends BaseAppState {
         }
     }
 
+    // --- SISTEMA DE RESPAWN ---
     private void respawn() {
         characterControl.setWalkDirection(Vector3f.ZERO);
         characterControl.warp(spawnPosition);
 
-        // CORREÇÃO 3: Usar o método respawn do Character
         if (player != null) {
             player.respawn();
         }
@@ -476,11 +486,14 @@ public class PlayerAppState extends BaseAppState {
         updateHud();
         damageCooldown = RESPAWN_PROTECTION_TIME;
 
+        // reset camera angles
         this.pitch = -0.35f;
         applyViewToCamera();
     }
 
+
     private Vector3f computeWorldMove(Vector3f inputXZ) {
+        // Garante que os movimentos são relacionados à direção da câmara e não ao eixo fixo do mundo
         float sinY = FastMath.sin(yaw);
         float cosY = FastMath.cos(yaw);
         Vector3f forward = new Vector3f(-sinY, 0, -cosY);
@@ -488,16 +501,18 @@ public class PlayerAppState extends BaseAppState {
         return left.mult(inputXZ.x).addLocal(forward.mult(inputXZ.z));
     }
 
+    // Aplica a posição e rotação do jogador à câmara
     private void applyViewToCamera() {
         Vector3f loc = playerNode.getWorldTranslation().add(0, eyeHeight, 0);
         cam.setLocation(loc);
         cam.setRotation(new com.jme3.math.Quaternion().fromAngles(pitch, yaw, 0f));
     }
 
-    // --- ADICIONA ISTO ---
+
     public WorldAppState getWorld() {
         return world;
     }
+
 
     @Override
     protected void cleanup(Application app) {
@@ -529,8 +544,4 @@ public class PlayerAppState extends BaseAppState {
         }
     }
 
-    // Por defeito, os blocos não dão dano (retornam 0)
-    public int getContactDamage() {
-        return 0;
-    }
 }
