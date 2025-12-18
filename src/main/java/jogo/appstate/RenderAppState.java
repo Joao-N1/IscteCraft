@@ -5,6 +5,7 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.post.filters.BloomFilter;
@@ -71,28 +72,37 @@ public class RenderAppState extends BaseAppState {
         for (GameObject obj : current) {
             // Verificar se já existe um Spatial para este objeto
             Spatial s = instances.get(obj);
+
             // Se não existir, criar um novo
             if (s == null) {
-                s = createSpatialFor(obj); // Metodo que cria o Spatial baseado no tipo de GameObject
+                s = createSpatialFor(obj);
                 if (s != null) {
-                    gameNode.attachChild(s); // Anexar ao nó principal
-                    instances.put(obj, s); // Guardar no map
-                    renderIndex.register(s, obj); // Registar para renderização
+                    gameNode.attachChild(s);
+                    instances.put(obj, s);
+                    renderIndex.register(s, obj);
                 }
             }
+
             // Atualizar a posição do Spatial para corresponder ao GameObject
             if (s != null) {
-                Vec3 p = obj.getPosition(); // Posição do GameObject
-                s.setLocalTranslation(new Vector3f(p.x, p.y, p.z)); // Atualizar posição
-            }
-            // ---Verificar se está morto ---
-            if (obj instanceof jogo.gameobject.character.Character c) {
-                if (c.isDead()) {
-                    // Se estiver morto, esconde o modelo
-                    s.setCullHint(Spatial.CullHint.Always);
-                } else {
-                    // Se estiver vivo, mostra o modelo
-                    s.setCullHint(Spatial.CullHint.Inherit);
+                Vec3 p = obj.getPosition();
+                s.setLocalTranslation(new Vector3f(p.x, p.y, p.z));
+
+                // --- Rotação dos NPCs ---
+                // Verifica se é um Personagem (Character) para aplicar rotação
+                if (obj instanceof jogo.gameobject.character.Character c) {
+
+                    // 1. Atualizar visibilidade (Morto ou Vivo)
+                    if (c.isDead()) {
+                        s.setCullHint(Spatial.CullHint.Always);
+                    } else {
+                        s.setCullHint(Spatial.CullHint.Inherit);
+                    }
+
+                    // 2. Aplicar a Rotação (Yaw)
+                    Quaternion rotation = new Quaternion();
+                    rotation.fromAngleAxis(c.getYaw(), Vector3f.UNIT_Y);
+                    s.setLocalRotation(rotation);
                 }
             }
         }
@@ -101,12 +111,11 @@ public class RenderAppState extends BaseAppState {
         var it = instances.entrySet().iterator();
         while (it.hasNext()) {
             var e = it.next();
-            // Se o objeto não está na lista atual, removê-lo
             if (!alive.contains(e.getKey())) {
                 Spatial s = e.getValue();
-                renderIndex.unregister(s); // Remover do índice de renderização
-                if (s.getParent() != null) s.removeFromParent(); // Desanexar do nó principal (remove do ecrâ)
-                it.remove(); // Remover do map
+                renderIndex.unregister(s);
+                if (s.getParent() != null) s.removeFromParent();
+                it.remove();
             }
         }
     }

@@ -1,7 +1,8 @@
 package jogo.voxel;
 
-import jogo.voxel.blocks.AirBlockType;
 
+import jogo.voxel.blocks.*;
+import jogo.voxel.items.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,73 +26,67 @@ public class VoxelPalette {
 
     public int size() { return types.size(); }
 
-    // Cria uma paleta padrão com tipos de blocos comuns
+    // Cria uma paleta padrão com tipos de blocos instanciados
     public static VoxelPalette defaultPalette() {
         VoxelPalette p = new VoxelPalette();
 
-        // 0. AR (Especial)
-        p.register(new jogo.voxel.blocks.AirBlockType());
+        // 0. AR
+        p.register(new AirBlockType());
 
         // --- BLOCOS NORMAIS ---
-        p.register(new SimpleBlockType("stone",    "StoneBlock.png", 6.0f)); // ID 1
-        p.register(new SimpleBlockType("therock",  "TheRock.png",    9999999999999999999f)); // ID 2
-        p.register(new SimpleBlockType("dirt",     "DirtBlock.png",  1.0f)); // ID 3
-        p.register(new SimpleBlockType("grass",    "GrassBlock.png", 1.0f)); // ID 4
-        p.register(new SimpleBlockType("wood",     "WoodBlock.png",  3.0f)); // ID 5
+        p.register(new StoneBlockType());      // ID 1
+        p.register(new TheRockBlockType());    // ID 2
+        p.register(new DirtBlockType());       // ID 3
+        p.register(new GrassBlockType());      // ID 4
+        p.register(new WoodBlockType());       // ID 5
 
         // ID 6: Spiky Wood
-        p.register(new SimpleBlockType("spikywood","SpikyWoodBlock.png", 3.0f, (byte)0, 10));
+        p.register(new SpikyWoodBlockType());
 
         // ID 7: Leaf
-        p.register(new SimpleBlockType("leaf",     "LeafBlock.png",  0.2f)); // ID 7
+        p.register(new LeafBlockType());
 
-        // --- MINÉRIOS (Hardness + DropID) ---
-        // ID 8: Carvão (Dropa o item ID 17)
-        p.register(new SimpleBlockType("Coal Block", "CoalBlock.png", 7.0f, COAL_MAT_ID));
-
-        // ID 9: Ferro (Dropa o item ID 18)
-        p.register(new SimpleBlockType("Iron Block", "IronBlock.png", 8.0f, IRON_MAT_ID));
-
-        // ID 10: Diamante
-        p.register(new SimpleBlockType("Diamond",    "DiamondBlock.png", 10.0f));
+        // --- MINÉRIOS ---
+        p.register(new CoalOreBlockType());    // ID 8
+        p.register(new IronOreBlockType());    // ID 9
+        p.register(new DiamondBlockType());    // ID 10
 
         // ID 11: Tábuas
-        p.register(new SimpleBlockType("planks",   "PlanksBlock.png", 4.0f)); // ID 11
+        p.register(new PlanksBlockType());
 
-        // --- ITENS (SimpleItemType, não placeable) ---
-        p.register(new SimpleItemType("stick", "Stick.png")); // ID 12
+        // --- ITENS ---
+        p.register(new StickItem());       // ID 12
 
         // ID 13: Crafting Table
-        p.register(new SimpleBlockType("crafting_table", "CraftingTableBlock.png", 5.0f));
+        p.register(new CraftingTableBlockType());
 
         // --- TERRENO EXTRA ---
-        p.register(new SimpleBlockType("sand", "SandBlock.png", 1.0f)); // ID 14
+        p.register(new SandBlockType());       // ID 14
 
-        // ID 15: ÁGUA (Mantém a classe original para transparência/física especial)
-        p.register(new jogo.voxel.blocks.WaterBlockType());
+        // ID 15: ÁGUA
+        p.register(new WaterBlockType());
 
         // ID 16: Target Block
-        p.register(new SimpleBlockType("Target", "TargetBlock.png", 99999999999999999999999999f)); // ID 16
+        p.register(new TargetBlockType());
 
-        // --- ITENS MATERIAIS (SimpleItemType) ---
-        p.register(new SimpleItemType("coal_item", "CoalOre.png")); // ID 17
-        p.register(new SimpleItemType("iron_item", "IronOre.png")); // ID 18
+        // --- ITENS MATERIAIS ---
+        p.register(new CoalItem());        // ID 17
+        p.register(new IronItem());        // ID 18
 
         // --- LANTERNAS ---
-        p.register(new SimpleBlockType("lantern_off", "LanternOff.png", 4.0f)); // ID 19
-        // ID 20: Lanterna Acesa (Mantém a original para o GLOW)
-        p.register(new jogo.voxel.blocks.LanternOnBlockType());
+        p.register(new LanternOffBlockType()); // ID 19
+        p.register(new LanternOnBlockType()); // ID 20
 
-        // --- FERRAMENTAS (SimpleItemType) ---
-        p.register(new SimpleItemType("wood_pick",  "WoodPick.png"));  // ID 21
-        p.register(new SimpleItemType("stone_pick", "StonePick.png")); // ID 22
-        p.register(new SimpleItemType("iron_pick",  "IronPick.png"));  // ID 23
+        // --- FERRAMENTAS ---
+        p.register(new WoodPickItem());    // ID 21
+        p.register(new StonePickItem());   // ID 22
+        p.register(new IronPickItem());    // ID 23
 
         // ID 24: Spiky Planks (Dano 10)
-        p.register(new SimpleBlockType("Spiky Planks", "SpikyPlankBlock.png", 4.0f, (byte)0, 10));
+        p.register(new SpikyPlanksBlockType());
 
         // ID 25: Espada (Item)
-        p.register(new SimpleItemType("Sword", "Sword.png"));
+        p.register(new SwordItem());
 
         return p;
     }
@@ -114,8 +109,6 @@ public class VoxelPalette {
     public static final byte SAND_ID = 14;
     public static final byte WATER_ID = 15;
     public static final byte TARGET_ID = 16;
-
-
     public static final byte COAL_MAT_ID = 17;
     public static final byte IRON_MAT_ID = 18;
     public static final byte LANTERN_OFF_ID = 19;
@@ -123,7 +116,6 @@ public class VoxelPalette {
     public static final byte WOOD_PICK_ID = 21;
     public static final byte STONE_PICK_ID = 22;
     public static final byte IRON_PICK_ID = 23;
-
     public static final byte SPIKY_PLANKS_ID = 24;
     public static final byte SWORD_ID = 25;
 }
