@@ -66,22 +66,22 @@ public class Jogo extends SimpleApplication {
 
         // --- Spawnar uma Ovelha ---
         jogo.gameobject.character.Sheep ovelha = new jogo.gameobject.character.Sheep();
-        ovelha.setPosition(80.0f, 25f, 80.0f);
+        ovelha.setPosition(80.0f, 26f, 80.0f);
         registry.add(ovelha);
 
         // --- Criar Zombie ---
         jogo.gameobject.character.Zombie zombie = new jogo.gameobject.character.Zombie();
-        zombie.setPosition(160, 25, 160);
+        zombie.setPosition(160, 26f, 160);
         registry.add(zombie);
 
         // --- Criar Lobo ---
         jogo.gameobject.character.Wolf lobo = new jogo.gameobject.character.Wolf();
-        lobo.setPosition(190, 25, 190);
+        lobo.setPosition(190, 26f, 190);
         registry.add(lobo);
 
         // --- Criar Trader ---
         jogo.gameobject.character.Trader trader = new jogo.gameobject.character.Trader();
-        trader.setPosition(135, 25, 135);
+        trader.setPosition(135, 26f, 135);
         registry.add(trader);
 
         // Post-processing: SSAO for subtle contact shadows

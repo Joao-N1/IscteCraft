@@ -70,7 +70,8 @@ public class VoxelPalette {
         // ID 15: ÁGUA (Mantém a classe original para transparência/física especial)
         p.register(new jogo.voxel.blocks.WaterBlockType());
 
-        p.register(new SimpleBlockType("Target", "TargetBlock.png", 0.5f)); // ID 16
+        // ID 16: Target Block
+        p.register(new SimpleBlockType("Target", "TargetBlock.png", 99999999999999999999999999f)); // ID 16
 
         // --- ITENS MATERIAIS (SimpleItemType) ---
         p.register(new SimpleItemType("coal_item", "CoalOre.png")); // ID 17
