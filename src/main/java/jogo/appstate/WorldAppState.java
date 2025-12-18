@@ -3,6 +3,8 @@ package jogo.appstate;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.asset.AssetManager;
+import com.jme3.audio.AudioNode;
+import com.jme3.audio.AudioSource;
 import com.jme3.bullet.PhysicsSpace;
 import com.jme3.bullet.collision.shapes.BoxCollisionShape;
 import com.jme3.bullet.control.RigidBodyControl;
@@ -46,6 +48,8 @@ public class WorldAppState extends BaseAppState {
     private final List<DroppedItem> droppedItems = new ArrayList<>(); // Itens atualmente no chão
     private Node droppedItemsNode = new Node("DroppedItems"); // Nó para agrupar itens soltos
 
+    private AudioNode rockMusic;
+
     public WorldAppState(Node rootNode, AssetManager assetManager, PhysicsSpace physicsSpace, Camera cam, InputAppState input) {
         this.rootNode = rootNode;
         this.assetManager = assetManager;
@@ -85,6 +89,18 @@ public class WorldAppState extends BaseAppState {
         sun.setDirection(new Vector3f(-0.35f, -1.3f, -0.25f).normalizeLocal());
         sun.setColor(ColorRGBA.White.mult(1.3f));
         worldNode.addLight(sun);
+
+        // 5. Iniciar música do The Rock
+        try {
+            rockMusic = new AudioNode(assetManager, "Sounds/TheRockMusic.wav", false);
+            rockMusic.setPositional(false);
+            rockMusic.setLooping(false);
+            rockMusic.setVolume(2.0f);
+            rootNode.attachChild(rockMusic);
+        } catch (Exception e) {
+            System.out.println("Erro ao carregar áudio: " + e.getMessage());
+        }
+
 
         spawnPosition = voxelWorld.getRecommendedSpawn();
     }
@@ -155,6 +171,16 @@ public class WorldAppState extends BaseAppState {
         // Obter o tipo do bloco alvo
         byte blockId = voxelWorld.getBlock(currentTarget.x, currentTarget.y, currentTarget.z);
         var blockType = voxelWorld.getPalette().get(blockId);
+
+        //Tocar música do The Rock ao partir o bloco
+        if (blockId == VoxelPalette.THEROCK_ID) {
+            if (rockMusic != null && rockMusic.getStatus() != AudioSource.Status.Playing) {
+                rockMusic.play();
+                System.out.println("Can't stop the Rock!");
+            }
+            breakTimer = 0f; // Reseta o timer para nunca quebrar
+            return; // Sai da função para ignorar o resto da lógica de quebra
+        }
 
         // --- LÓGICA DE PICARETAS ---
         float speedMultiplier = 1.0f; // Velocidade base (mão vazia)
