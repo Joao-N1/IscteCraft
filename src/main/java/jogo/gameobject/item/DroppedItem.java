@@ -7,7 +7,7 @@ public class DroppedItem {
     private final Node node;
     private final RigidBodyControl physics;
     private final ItemStack stack;
-    private float pickupDelay; // Tempo que o item espera até poder ser apanhado (para não o apanhares logo ao atirar)
+    private float pickupDelay; // Tempo que o item espera até poder ser apanhado
 
     public DroppedItem(Node node, RigidBodyControl physics, ItemStack stack) {
         this.node = node;
@@ -20,7 +20,6 @@ public class DroppedItem {
         if (pickupDelay > 0) {
             pickupDelay -= tpf;
         }
-        // Opcional: Fazer o item rodar suavemente
         node.rotate(0, tpf, 0);
     }
 

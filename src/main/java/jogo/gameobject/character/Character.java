@@ -34,7 +34,7 @@ public abstract class Character extends GameObject {
 
     public int getHealth() { return health; }
 
-    // Método para receber dano
+    // Metodo para receber dano
     public void takeDamage(int damage) {
         if (isDead) return;
 

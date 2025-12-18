@@ -1,12 +1,12 @@
 package jogo.gameobject.item;
 
-import java.io.Serializable; // <--- ADICIONAR ISTO
+import java.io.Serializable;
 
-public class ItemStack implements Serializable { // <--- ADICIONAR "implements Serializable"
-    private static final long serialVersionUID = 1L; // Boa prática
+public class ItemStack implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private byte id;
-    // ... resto do código igual ...
+
 
     private int amount;
     public static final int MAX_STACK = 64;
