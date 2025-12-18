@@ -30,16 +30,6 @@ public class MeshBuilder {
         return idx; // Retorna o id
     }
 
-    //Cria os triangulos para os quadrados dos cubos
-    public void addQuad(Vector3f v0, Vector3f v1, Vector3f v2, Vector3f v3, Vector3f normal) {
-        int i0 = addVertex(v0, normal, new Vector2f(0,0));
-        int i1 = addVertex(v1, normal, new Vector2f(0,1));
-        int i2 = addVertex(v2, normal, new Vector2f(1,1));
-        int i3 = addVertex(v3, normal, new Vector2f(1,0));
-        // CCW triangles
-        indices.add(i0); indices.add(i1); indices.add(i2);
-        indices.add(i0); indices.add(i2); indices.add(i3);
-    }
 
     // Add a quad with explicit UVs
     private void addQuadUV(Vector3f v0, Vector3f v1, Vector3f v2, Vector3f v3, Vector3f normal,

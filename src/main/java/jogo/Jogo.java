@@ -19,7 +19,7 @@ public class Jogo extends SimpleApplication {
         Jogo app = new Jogo();
         app.setShowSettings(true); // show settings dialog
         AppSettings settings = new AppSettings(true);
-        settings.setTitle("Test");
+        settings.setTitle("IscteCraft");
         settings.setWidth(1280);
         settings.setHeight(720);
         settings.setGammaCorrection(true); // enable sRGB gamma-correct rendering
@@ -55,11 +55,7 @@ public class Jogo extends SimpleApplication {
         stateManager.attach(new RenderAppState(rootNode, assetManager, registry, renderIndex));
         stateManager.attach(new InteractionAppState(rootNode, cam, input, renderIndex, world));
 
-        // Demo objects
-        // Chest chest = new Chest();
-        // chest.setPosition(26.5f, world.getRecommendedSpawnPosition().y - 2f, 26.5f);
-        // registry.add(chest);
-
+        // --- Adicionar Player ---
         PlayerAppState player = new PlayerAppState(rootNode, assetManager, cam, input, physicsSpace, world);
         stateManager.attach(player);
 
@@ -102,9 +98,10 @@ public class Jogo extends SimpleApplication {
             System.out.println("SSAO not available (effects module missing?): " + e.getMessage());
         }
 
-        // HUD (just a crosshair for now)
+        // HUD
         stateManager.attach(new HudAppState(guiNode, assetManager));
 
+        // Mini-game AppState
         stateManager.attach(new jogo.appstate.MiniGameAppState());
     }
 }

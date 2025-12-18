@@ -15,7 +15,7 @@ public class SaveManager {
     private static final String SAVE_DIR = "saves/";
 
     public static void saveGame(String saveName, GameSaveData data) {
-        // Executar numa nova Thread para o jogo não travar (lag) enquanto grava
+        // Executar numa nova Thread para o jogo não travar enquanto grava
         new Thread(() -> {
             try {
                 if (!Files.exists(Paths.get(SAVE_DIR))) {
@@ -23,10 +23,10 @@ public class SaveManager {
                 }
 
                 String path = SAVE_DIR + saveName + ".dat";
-                FileOutputStream fos = new FileOutputStream(path);
-                // --- MELHORIA: GZIP para comprimir o ficheiro ---
-                GZIPOutputStream gzip = new GZIPOutputStream(fos);
-                ObjectOutputStream oos = new ObjectOutputStream(gzip);
+                FileOutputStream fos = new FileOutputStream(path); //fluxo de saída para o ficheiro
+                // --- Uso de GZIP para comprimir o ficheiro ---
+                GZIPOutputStream gzip = new GZIPOutputStream(fos); //comprime os dados
+                ObjectOutputStream oos = new ObjectOutputStream(gzip); //escreve objetos
 
                 oos.writeObject(data);
 
@@ -45,12 +45,12 @@ public class SaveManager {
     public static GameSaveData loadGame(String saveName) {
         try {
             String path = SAVE_DIR + saveName + ".dat";
-            FileInputStream fis = new FileInputStream(path);
+            FileInputStream fis = new FileInputStream(path); //fluxo de entrada do ficheiro
             // --- MELHORIA: Ler com GZIP ---
-            GZIPInputStream gzip = new GZIPInputStream(fis);
-            ObjectInputStream ois = new ObjectInputStream(gzip);
+            GZIPInputStream gzip = new GZIPInputStream(fis); //descomprime os dados
+            ObjectInputStream ois = new ObjectInputStream(gzip); //lê objetos
 
-            GameSaveData data = (GameSaveData) ois.readObject();
+            GameSaveData data = (GameSaveData) ois.readObject(); //ler o objeto salvo
 
             ois.close();
             gzip.close();

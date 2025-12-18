@@ -13,7 +13,7 @@ public class DroppedItem {
         this.node = node;
         this.physics = physics;
         this.stack = stack;
-        this.pickupDelay = 1.5f; // 1.5 segundos de espera inicial
+        this.pickupDelay = 1.0f; // 1.0 segundo de espera inicial
     }
 
     public void update(float tpf) {
@@ -23,6 +23,7 @@ public class DroppedItem {
         node.rotate(0, tpf, 0);
     }
 
+    //Metodo que o PlayerAppState chama para verificar se o item pode ser apanhado
     public boolean canBePickedUp() {
         return pickupDelay <= 0;
     }

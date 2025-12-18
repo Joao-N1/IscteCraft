@@ -10,7 +10,7 @@ import java.util.Map;
 
 // Classe para armazenar todos os dados do jogo que precisam ser salvos/carregados
 public class GameSaveData implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // Versão de serialização garantindo a ordem correta dos dados
 
     // --- DADOS DO MINIJOGO ---
     public float miniGameTimer = 0f;

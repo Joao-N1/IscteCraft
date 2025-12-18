@@ -359,8 +359,8 @@ public class PlayerAppState extends BaseAppState {
 
         // 1. Jogador (Update Posição e Inventário) ...
         characterControl.warp(new Vector3f(data.playerX, data.playerY, data.playerZ));
-        this.yaw = data.rotYaw;
-        this.pitch = data.rotPitch;
+        this.yaw = data.rotYaw; // horizontal
+        this.pitch = data.rotPitch; // vertical
         player.setHealth(data.health);
         if (hud != null) hud.setHealth(player.getHealth());
 
