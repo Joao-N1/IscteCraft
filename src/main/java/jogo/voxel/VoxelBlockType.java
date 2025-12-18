@@ -31,18 +31,18 @@ public abstract class VoxelBlockType {
 
     // --- MÉTODOS DE EVENTOS ---
 
-    /**
-     * Chamado a cada frame enquanto o jogador mina.
-     * @return true se pode continuar a minar.
-     */
+    //Chamado a cada frame enquanto o jogador mina. return true se pode continuar a minar.
+
     public boolean processMining(WorldAppState world, PlayerAppState player, float tpf) {
         return true;
     }
 
-    /**
-     * Chamado quando o bloco parte.
-     * A classe base apenas remove o voxel do mundo físico.
-     */
+    public float getMiningSpeed() {
+        return 1.0f;
+    }
+
+    //Chamado quando o bloco parte. A classe base apenas remove o voxel do mundo físico.
+
     public void onBlockBreak(WorldAppState world, Vector3i pos, PlayerAppState player) {
         // 1. Remove o bloco do mundo
         world.getVoxelWorld().breakAt(pos.x, pos.y, pos.z);

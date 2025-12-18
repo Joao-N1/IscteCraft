@@ -17,7 +17,9 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 import jogo.gameobject.item.DroppedItem;
+import jogo.gameobject.item.Item;
 import jogo.gameobject.item.ItemStack;
+import jogo.voxel.SimpleItemType;
 import jogo.voxel.VoxelBlockType;
 import jogo.voxel.VoxelPalette;
 import jogo.voxel.VoxelWorld;
@@ -159,11 +161,18 @@ public class WorldAppState extends BaseAppState {
 
         // --- LÓGICA DE PICARETAS ---
         float speedMultiplier = 1.0f;
+
         if (playerAppState != null) {
-            byte heldItem = playerAppState.getPlayer().getHeldItem();
-            if (heldItem == VoxelPalette.WOOD_PICK_ID) speedMultiplier = 2.0f;
-            else if (heldItem == VoxelPalette.STONE_PICK_ID) speedMultiplier = 4.0f;
-            else if (heldItem == VoxelPalette.IRON_PICK_ID) speedMultiplier = 6.0f;
+            // 1. Obtém o ID do item na mão
+            byte heldItemId = playerAppState.getPlayer().getHeldItem();
+
+            // 2. Obtém o objeto da paleta
+            VoxelBlockType itemType = voxelWorld.getPalette().get(heldItemId);
+
+            // 3. Pede a velocidade, se for picareta, usa a velocidade dela; senão, usa 1.0)
+            if (itemType != null) {
+                speedMultiplier = itemType.getMiningSpeed();
+            }
         }
 
         breakTimer += tpf * speedMultiplier;

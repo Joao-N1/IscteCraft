@@ -14,6 +14,7 @@ public class SimpleItemType extends VoxelBlockType {
         this.texturePath = textureName.contains("/") ? textureName : "Textures/" + textureName;
     }
 
+
     @Override
     public boolean isPlaceable() {
         return false; // É um item, não vai para o mundo!
